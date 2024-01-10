@@ -1353,7 +1353,7 @@ class PathFinder:
         for hook in sys.path_hooks:
             try:
                 return hook(path)
-            except ImportError as e:
+            except ImportError:
                 continue
         else:
             return None

@@ -157,7 +157,6 @@ def setup (**attrs):
 
         except (DistutilsError,
                 CCompilerError) as msg:
-            raise exc
             if DEBUG:
                 raise
             else:
