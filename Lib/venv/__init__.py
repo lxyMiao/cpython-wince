@@ -184,7 +184,7 @@ class EnvBuilder:
             if self.prompt is not None:
                 f.write(f'prompt = {self.prompt!r}\n')
 
-    if os.name != 'nt':
+    if os.name not in ('nt', 'ce'):
         def symlink_or_copy(self, src, dst, relative_symlinks_ok=False):
             """
             Try symlinking a file, and if that fails, fall back to copying.
@@ -258,7 +258,7 @@ class EnvBuilder:
         path = context.env_exe
         copier = self.symlink_or_copy
         dirname = context.python_dir
-        if os.name != 'nt':
+        if os.name not in ('nt', 'ce'):
             copier(context.executable, path)
             if not os.path.islink(path):
                 os.chmod(path, 0o755)
@@ -393,7 +393,7 @@ class EnvBuilder:
                         dirs.remove(d)
                 continue # ignore files in top level
             for f in files:
-                if (os.name == 'nt' and f.startswith('python')
+                if (os.name in ('nt', 'ce') and f.startswith('python')
                         and f.endswith(('.exe', '.pdb'))):
                     continue
                 srcfile = os.path.join(root, f)
@@ -464,7 +464,7 @@ def main(args=None):
                             action='store_true', dest='system_site',
                             help='Give the virtual environment access to the '
                                  'system site-packages dir.')
-        if os.name == 'nt':
+        if os.name in ('nt', 'ce'):
             use_symlinks = False
         else:
             use_symlinks = True

@@ -147,20 +147,34 @@ class LoaderTest(unittest.TestCase):
 
             def should_pass(command):
                 with self.subTest(command):
-                    subprocess.check_output(
-                        [sys.executable, "-c",
-                         "from ctypes import *; import nt;" + command],
-                        cwd=tmp
-                    )
+                    if os.name == "nt":
+                        subprocess.check_output(
+                            [sys.executable, "-c",
+                             "from ctypes import *; import nt;" + command],
+                            cwd=tmp
+                        )
+                    else: # Windows CE
+                        subprocess.check_output(
+                            [sys.executable, "-c",
+                             "from ctypes import *; import ce;" + command],
+                            cwd=tmp
+                        )
 
             def should_fail(command):
                 with self.subTest(command):
                     with self.assertRaises(subprocess.CalledProcessError):
-                        subprocess.check_output(
-                            [sys.executable, "-c",
-                             "from ctypes import *; import nt;" + command],
-                            cwd=tmp, stderr=subprocess.STDOUT,
-                        )
+                        if os.name == "nt":
+                            subprocess.check_output(
+                                [sys.executable, "-c",
+                                 "from ctypes import *; import nt;" + command],
+                                cwd=tmp, stderr=subprocess.STDOUT,
+                            )
+                        else: # Windows CE
+                            subprocess.check_output(
+                                [sys.executable, "-c",
+                                 "from ctypes import *; import ce;" + command],
+                                cwd=tmp, stderr=subprocess.STDOUT,
+                            )
 
             # Default load should not find this in CWD
             should_fail("WinDLL('_sqlite3.dll')")
