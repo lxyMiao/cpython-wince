@@ -3,6 +3,8 @@ rm -rf wince_build
 mkdir wince_build
 mkdir wince_build/Lib
 
+BUILD_MACHINE=`$SHELL ./config.guess`
+
 if test ! -d build/bin; then echo "not built yet!"; exit 1; fi
 
 cp build/bin/python3.10.exe wince_build/
@@ -19,7 +21,7 @@ mv python310.zip ../../../wince_build/
 
 cd ../../../
 
-ls build/lib.wince-arm-3.10/*.so -d | sed 's/\.cpython.*//' | sed 's/^.*\///' | awk '{printf "cp build/lib.wince-arm-3.10/"$1".cpython-310-x86_64-linux-gnu.so  wince_build/"$1".pyd\n"}' | bash
+ls build/lib.wince-arm-3.10/*.so -d | sed 's/\.cpython.*//' | sed 's/^.*\///' | awk '{printf "cp build/lib.wince-arm-3.10/"$1".cpython-310-*.so  wince_build/"$1".pyd\n"}' | bash
 
 echo -ne "Lib\npython310.zip\n.\nimport site" > wince_build/libpython3.10._pth
 

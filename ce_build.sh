@@ -43,7 +43,7 @@ make distclean
 ac_cv_pthread_is_default=yes ac_cv_cxx_thread=yes ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no ac_cv_have_long_long_format=yes \
 ac_cv_enable_implicit_function_declaration_error=no \
 ./configure --prefix=$PWD/build \
---build=x86_64-pc-linux-gnu --host=mingw32ce --target=mingw32ce \
+--build=`$SHELL ./config.guess || echo 'unknown'` --host=mingw32ce --target=mingw32ce \
 --disable-ipv6 \
 --enable-shared \
 --with-ensurepip=no \
