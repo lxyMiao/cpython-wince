@@ -8,7 +8,9 @@
 #include "Python.h"
 #include <stddef.h>
 #include <signal.h>
+#ifndef MS_WINCE
 #include <errno.h>
+#endif
 #include <sys/time.h>
 
 #if defined(HAVE_SETLOCALE)

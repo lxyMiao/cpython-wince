@@ -378,9 +378,15 @@ _io_open_impl(PyObject *module, PyObject *file, const char *mode,
         PyObject *RawIO_class = (PyObject *)&PyFileIO_Type;
 #ifdef MS_WINDOWS
         const PyConfig *config = _Py_GetConfig();
+#ifndef MS_WINCE
         if (!config->legacy_windows_stdio && _PyIO_get_console_type(path_or_fd) != '\0') {
             RawIO_class = (PyObject *)&PyWindowsConsoleIO_Type;
             encoding = "utf-8";
+#else
+        if (!config->legacy_windows_stdio && _PyIO_get_console_type(path_or_fd) != '\0') {
+            RawIO_class = (PyObject *)&PyWinCEConsoleIO_Type;
+            encoding = "utf-8";
+#endif
         }
 #endif
         raw = PyObject_CallFunction(RawIO_class, "OsOO",
@@ -747,9 +753,15 @@ PyInit__io(void)
     ADD_TYPE(&PyStringIO_Type);
 
 #ifdef MS_WINDOWS
+#ifndef MS_WINCE
     /* WindowsConsoleIO */
     PyWindowsConsoleIO_Type.tp_base = &PyRawIOBase_Type;
     ADD_TYPE(&PyWindowsConsoleIO_Type);
+#else
+    /* WinCEConsoleIO */
+    PyWinCEConsoleIO_Type.tp_base = &PyRawIOBase_Type;
+    ADD_TYPE(&PyWinCEConsoleIO_Type);
+#endif
 #endif
 
     /* BufferedReader */

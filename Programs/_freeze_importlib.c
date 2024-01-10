@@ -7,7 +7,9 @@
 
 #include <stdio.h>
 #include <sys/types.h>
+#ifndef MS_WINCE
 #include <sys/stat.h>
+#endif
 #ifndef MS_WINDOWS
 #include <unistd.h>
 #endif

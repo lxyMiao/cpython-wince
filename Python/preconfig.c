@@ -5,7 +5,6 @@
 #include "pycore_runtime.h"       // _PyRuntime_Initialize()
 #include <locale.h>               // setlocale()
 
-
 #define DECODE_LOCALE_ERR(NAME, LEN) \
     (((LEN) == -2) \
      ? _PyStatus_ERR("cannot decode " NAME) \

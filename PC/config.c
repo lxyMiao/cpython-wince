@@ -16,7 +16,11 @@ extern PyObject* PyInit__tracemalloc(void);
 extern PyObject* PyInit_gc(void);
 extern PyObject* PyInit_math(void);
 extern PyObject* PyInit__md5(void);
+#ifndef MS_WINCE
 extern PyObject* PyInit_nt(void);
+#else
+extern PyObject* PyInit_ce(void);
+#endif
 extern PyObject* PyInit__operator(void);
 extern PyObject* PyInit__signal(void);
 extern PyObject* PyInit__sha1(void);
@@ -65,7 +69,9 @@ extern PyObject* PyInit__winapi(void);
 extern PyObject* PyInit__lsprof(void);
 extern PyObject* PyInit__ast(void);
 extern PyObject* PyInit__io(void);
+#ifndef MS_WINCE /* FIXME-WINCE: not supported for now */
 extern PyObject* PyInit__pickle(void);
+#endif
 extern PyObject* PyInit_atexit(void);
 extern PyObject* _PyWarnings_Init(void);
 extern PyObject* PyInit__string(void);
@@ -93,7 +99,11 @@ struct _inittab _PyImport_Inittab[] = {
     {"faulthandler", PyInit_faulthandler},
     {"gc", PyInit_gc},
     {"math", PyInit_math},
+#ifndef MS_WINCE
     {"nt", PyInit_nt}, /* Use the NT os functions, not posix */
+#else
+    {"ce", PyInit_ce}, /* Use the CE os functions, not posix */
+#endif
     {"_operator", PyInit__operator},
     {"_signal", PyInit__signal},
     {"_md5", PyInit__md5},
@@ -162,7 +172,9 @@ struct _inittab _PyImport_Inittab[] = {
     {"_string", PyInit__string},
 
     {"_io", PyInit__io},
+#ifndef MS_WINCE
     {"_pickle", PyInit__pickle},
+#endif
     {"atexit", PyInit_atexit},
     {"_stat", PyInit__stat},
     {"_opcode", PyInit__opcode},

@@ -3,9 +3,8 @@
 
 #include "Python.h"
 #include "pycore_runtime.h"  // _PyRuntime_Initialize()
-#include <locale.h>
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && defined(_MSC_VER)
 extern void PyWinFreeze_ExeInit(void);
 extern void PyWinFreeze_ExeTerm(void);
 extern int PyInitFrozenExtensions(void);
@@ -75,7 +74,7 @@ Py_FrozenMain(int argc, char **argv)
     PyMem_RawFree(oldloc);
     oldloc = NULL;
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && defined(_MSC_VER)
     PyInitFrozenExtensions();
 #endif /* MS_WINDOWS */
     if (argc >= 1)
@@ -87,7 +86,7 @@ Py_FrozenMain(int argc, char **argv)
         Py_ExitStatusException(status);
     }
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && defined(_MSC_VER)
     PyWinFreeze_ExeInit();
 #endif
 
@@ -110,7 +109,7 @@ Py_FrozenMain(int argc, char **argv)
     if (inspect && isatty((int)fileno(stdin)))
         sts = PyRun_AnyFile(stdin, "<stdin>") != 0;
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && defined(_MSC_VER)
     PyWinFreeze_ExeTerm();
 #endif
     if (Py_FinalizeEx() < 0) {

@@ -76,7 +76,7 @@ class build(Command):
             # plat-name only supported for windows (other platforms are
             # supported via ./configure flags, if at all).  Avoid misleading
             # other platforms.
-            if os.name != 'nt':
+            if os.name not in ('nt', 'ce'):
                 raise DistutilsOptionError(
                             "--plat-name only supported on Windows (try "
                             "using './configure --help' on your platform)")

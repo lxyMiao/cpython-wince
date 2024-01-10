@@ -173,16 +173,35 @@ typedef struct {
 
 /* thunker to call adapt between the function type used by the system's
 thread start function and the internally used one. */
+#if defined(MS_WINCE)
+static DWORD WINAPI
+#else
 static unsigned __stdcall
+#endif
 bootstrap(void *call)
 {
     callobj *obj = (callobj*)call;
     void (*func)(void*) = obj->func;
     void *arg = obj->arg;
+#ifdef MS_WINCE
+    int errno_storage;
+    wince_errno_new_thread(&errno_storage);
+#endif
     HeapFree(GetProcessHeap(), 0, obj);
     func(arg);
+#ifdef MS_WINCE
+    wince_errno_thread_exit();
+#endif
     return 0;
 }
+
+#ifdef MS_WINCE
+static void
+_endthread()
+{
+	ExitThread(0);
+}
+#endif
 
 unsigned long
 PyThread_start_new_thread(void (*func)(void *), void *arg)
@@ -203,10 +222,18 @@ PyThread_start_new_thread(void (*func)(void *), void *arg)
     obj->arg = arg;
     PyThreadState *tstate = _PyThreadState_GET();
     size_t stacksize = tstate ? tstate->interp->pythread_stacksize : 0;
+#if defined(MS_WINCE)
+    hThread = (HANDLE)CreateThread(NULL,
+                      Py_SAFE_DOWNCAST(stacksize, Py_ssize_t, SIZE_T),
+                      bootstrap, obj, 0, &threadID);
+    if (hThread == NULL)
+        hThread = (HANDLE)-1;
+#else
     hThread = (HANDLE)_beginthreadex(0,
                       Py_SAFE_DOWNCAST(stacksize, Py_ssize_t, unsigned int),
                       bootstrap, obj,
                       0, &threadID);
+#endif
     if (hThread == 0) {
         /* I've seen errno == EAGAIN here, which means "there are
          * too many threads".
@@ -261,9 +288,16 @@ void _Py_NO_RETURN
 PyThread_exit_thread(void)
 {
     dprintf(("%lu: PyThread_exit_thread called\n", PyThread_get_thread_ident()));
+#ifdef MS_WINCE
+    wince_errno_thread_exit();
+#endif
     if (!initialized)
         exit(0);
+#if defined(MS_WINCE)
+     ExitThread(0);
+#else
     _endthreadex(0);
+#endif
 }
 
 /*

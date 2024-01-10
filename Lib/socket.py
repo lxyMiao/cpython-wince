@@ -523,7 +523,7 @@ class socket(_socket.socket):
         """
         return _intenum_converter(super().type, SocketKind)
 
-    if os.name == 'nt':
+    if os.name in ('nt', 'ce'):
         def get_inheritable(self):
             return os.get_handle_inheritable(self.fileno())
         def set_inheritable(self, inheritable):
@@ -903,7 +903,7 @@ def create_server(address, *, family=AF_INET, backlog=None, reuse_port=False,
         # connections. Also, it may set the process in a state where
         # it'll no longer respond to any signals or graceful kills.
         # See: msdn2.microsoft.com/en-us/library/ms740621(VS.85).aspx
-        if os.name not in ('nt', 'cygwin') and \
+        if os.name not in ('nt', 'ce', 'cygwin') and \
                 hasattr(_socket, 'SO_REUSEADDR'):
             try:
                 sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)

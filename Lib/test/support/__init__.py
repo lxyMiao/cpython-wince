@@ -1990,7 +1990,7 @@ def wait_process(pid, *, exitcode, timeout=None):
     kill the process (if signal.SIGKILL is available) and raise an
     AssertionError. The timeout feature is not available on Windows.
     """
-    if os.name != "nt":
+    if os.name not in ("nt", "ce"):
         import signal
 
         if timeout is None:

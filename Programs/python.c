@@ -2,11 +2,17 @@
 
 #include "Python.h"
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
 int
 wmain(int argc, wchar_t **argv)
 {
     return Py_Main(argc, argv);
+}
+#elif defined(MS_WINCE)
+int
+WinMain(HINSTANCE hCurInst, HINSTANCE hPrevInst, wchar_t *lpsCmdLine, int nCmdShow)
+{
+    return WinCEShell_WinMain(hCurInst, hPrevInst, lpsCmdLine, nCmdShow);
 }
 #else
 int

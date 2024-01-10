@@ -16,6 +16,9 @@
 #  include "windows.h"
 #endif /* MS_WINDOWS */
 
+#ifdef MS_WINCE
+#  define fileno _fileno
+#endif /* MS_WINCE */
 
 PyThreadState* _PyOS_ReadlineTState = NULL;
 
@@ -107,7 +110,7 @@ my_fgets(PyThreadState* tstate, char *buf, int len, FILE *fp)
     /* NOTREACHED */
 }
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
 /* Readline implementation using ReadConsoleW */
 
 extern char _get_console_type(HANDLE handle);
@@ -245,7 +248,7 @@ PyOS_StdioReadline(FILE *sys_stdin, FILE *sys_stdout, const char *prompt)
     PyThreadState *tstate = _PyOS_ReadlineTState;
     assert(tstate != NULL);
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     if (!Py_LegacyWindowsStdioFlag && sys_stdin == stdin) {
         HANDLE hStdIn, hStdErr;
 
@@ -385,9 +388,11 @@ PyOS_Readline(FILE *sys_stdin, FILE *sys_stdout, const char *prompt)
      * a tty.  This can happen, for example if python is run like
      * this: python -i < test1.py
      */
+#ifndef MS_WINCE
     if (!isatty (fileno (sys_stdin)) || !isatty (fileno (sys_stdout)))
         rv = PyOS_StdioReadline (sys_stdin, sys_stdout, prompt);
     else
+#endif
         rv = (*PyOS_ReadlineFunctionPointer)(sys_stdin, sys_stdout,
                                              prompt);
     Py_END_ALLOW_THREADS

@@ -3,7 +3,9 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <string.h>
+#ifndef MS_WINCE
 #include <errno.h>
+#endif
 #include <unistd.h>
 
 /* On some systems, these aren't in any header file.

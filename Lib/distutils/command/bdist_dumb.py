@@ -45,7 +45,8 @@ class bdist_dumb(Command):
     boolean_options = ['keep-temp', 'skip-build', 'relative']
 
     default_format = { 'posix': 'gztar',
-                       'nt': 'zip' }
+                       'nt': 'zip',
+                       'ce': 'zip' }
 
     def initialize_options(self):
         self.bdist_dir = None

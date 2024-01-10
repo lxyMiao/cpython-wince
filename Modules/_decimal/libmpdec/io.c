@@ -30,7 +30,9 @@
 
 #include <assert.h>
 #include <ctype.h>
+#ifndef MS_WINCE
 #include <errno.h>
+#endif
 #include <limits.h>
 #include <locale.h>
 #include <stdio.h>

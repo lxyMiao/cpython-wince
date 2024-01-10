@@ -13,6 +13,7 @@
 #    Python bug tracker (http://bugs.python.org) and assign them to "lemburg".
 #
 #    Still needed:
+#    * more support for WinCE (this fork is made for WinCE!)
 #    * support for MS-DOS (PythonDX ?)
 #    * support for Amiga and other still unsupported platforms running Python
 #    * support for additional Linux distributions

@@ -123,6 +123,8 @@ CFLAGS_ALIASING=@CFLAGS_ALIASING@
 # Machine-dependent subdirectories
 MACHDEP=	@MACHDEP@
 
+
+
 # Multiarch directory (may be empty)
 MULTIARCH=	@MULTIARCH@
 MULTIARCH_CPPFLAGS = @MULTIARCH_CPPFLAGS@
@@ -288,12 +290,11 @@ COVERAGE_REPORT_OPTIONS=--no-branch-coverage --title "CPython lcov report"
 ##########################################################################
 # Modules
 MODULE_OBJS=	\
-		Modules/config.o \
-		Modules/getpath.o \
+		Modules/gcmodule.o \
 		Modules/main.o \
-		Modules/gcmodule.o
+		Modules/_winapi.o
 
-IO_H=		Modules/_io/_iomodule.h
+IO_H=	Modules/_io/_iomodule.h
 
 IO_OBJS=	\
 		Modules/_io/_iomodule.o \
@@ -302,7 +303,8 @@ IO_OBJS=	\
 		Modules/_io/bufferedio.o \
 		Modules/_io/textio.o \
 		Modules/_io/bytesio.o \
-		Modules/_io/stringio.o
+		Modules/_io/stringio.o \
+		Modules/_io/winceconsoleio.o
 
 ##########################################################################
 
@@ -445,9 +447,42 @@ OBJECT_OBJS=	\
 		Objects/weakrefobject.o
 
 ##########################################################################
+# WINCE
+WINCE_OBJS=	\
+		WinCE/terminal.o \
+		Modules/_xxsubinterpretersmodule.o \
+		Modules/rotatingtree.o \
+		Modules/_lsprof.o \
+		Modules/_opcode.o \
+		\
+    	PC/wince_compatibility.o \
+		PC/invalid_parameter_handler.o \
+		PC/winreg.o \
+		PC/config.o \
+		PC/getpathp.o \
+		PC/msvcrtmodule.o \
+		PC/dl_nt.o
+
+ZLIB_OBJS= \
+		   Modules/zlibmodule.o \
+		   $(ZLIBDIR)/adler32.o \
+		   $(ZLIBDIR)/compress.o \
+		   $(ZLIBDIR)/crc32.o \
+		   $(ZLIBDIR)/deflate.o \
+		   $(ZLIBDIR)/infback.o \
+		   $(ZLIBDIR)/inffast.o \
+		   $(ZLIBDIR)/inflate.o \
+		   $(ZLIBDIR)/inftrees.o \
+		   $(ZLIBDIR)/trees.o \
+		   $(ZLIBDIR)/uncompr.o \
+		   $(ZLIBDIR)/zutil.o
+
+##########################################################################
 # objects that get linked into the Python library
 LIBRARY_OBJS_OMIT_FROZEN=	\
 		Modules/getbuildinfo.o \
+		$(WINCE_OBJS) \
+		$(ZLIB_OBJS) \
 		$(PARSER_OBJS) \
 		$(OBJECT_OBJS) \
 		$(PYTHON_OBJS) \
@@ -472,7 +507,7 @@ DTRACE_DEPS = \
 # Default target
 all:		@DEF_MAKE_ALL_RULE@
 build_all:	check-clean-src $(BUILDPYTHON) oldsharedmods sharedmods gdbhooks \
-		Programs/_testembed python-config
+		python-config
 
 # Check that the source is clean when building out of source.
 check-clean-src:
@@ -639,7 +674,7 @@ $(LIBRARY): $(LIBRARY_OBJS)
 	-rm -f $@
 	$(AR) $(ARFLAGS) $@ $(LIBRARY_OBJS)
 
-libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
+libpython$(LDVERSION).dll: $(LIBRARY_OBJS) $(DTRACE_OBJS)
 	if test $(INSTSONAME) != $(LDLIBRARY); then \
 		$(BLDSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
 		$(LN) -f $(INSTSONAME) $@; \
@@ -647,7 +682,7 @@ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
 		$(BLDSHARED) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
 	fi
 
-libpython3.so:	libpython$(LDVERSION).so
+libpython3.dll:	libpython$(LDVERSION).dll
 	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
 
 libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
@@ -754,11 +789,11 @@ regen-importlib: Programs/_freeze_importlib
 
 regen-abidump: all
 	@$(MKDIR_P) $(srcdir)/Doc/data/
-	abidw "libpython$(LDVERSION).so" --no-architecture --out-file $(srcdir)/Doc/data/python$(LDVERSION).abi.new
+	abidw "libpython$(LDVERSION).dll" --no-architecture --out-file $(srcdir)/Doc/data/python$(LDVERSION).abi.new
 	@$(UPDATE_FILE) $(srcdir)/Doc/data/python$(LDVERSION).abi $(srcdir)/Doc/data/python$(LDVERSION).abi.new
 
 check-abidump: all
-		abidiff $(srcdir)/Doc/data/python$(LDVERSION).abi "libpython$(LDVERSION).so" --drop-private-types --no-architecture --no-added-syms
+		abidiff $(srcdir)/Doc/data/python$(LDVERSION).abi "libpython$(LDVERSION).dll" --drop-private-types --no-architecture --no-added-syms
 
 regen-limited-abi: all
 	$(RUNSHARED) ./$(BUILDPYTHON) $(srcdir)/Tools/scripts/stable_abi.py --generate-all $(srcdir)/Misc/stable_abi.txt
@@ -776,12 +811,14 @@ regen-all: regen-opcode regen-opcode-targets regen-typeslots \
 ############################################################################
 # Special rules for object files
 
-Modules/getbuildinfo.o: $(PARSER_OBJS) \
+Modules/getbuildinfo.o: \
+		$(PARSER_OBJS) \
 		$(OBJECT_OBJS) \
 		$(PYTHON_OBJS) \
 		$(MODULE_OBJS) \
 		$(MODOBJS) \
 		$(DTRACE_OBJS) \
+		$(PC_OBJS) \
 		$(srcdir)/Modules/getbuildinfo.c
 	$(CC) -c $(PY_CORE_CFLAGS) \
 	      -DGITVERSION="\"`LC_ALL=C $(GITVERSION)`\"" \
@@ -789,13 +826,13 @@ Modules/getbuildinfo.o: $(PARSER_OBJS) \
 	      -DGITBRANCH="\"`LC_ALL=C $(GITBRANCH)`\"" \
 	      -o $@ $(srcdir)/Modules/getbuildinfo.c
 
-Modules/getpath.o: $(srcdir)/Modules/getpath.c Makefile
+PC/getpathp.o: $(srcdir)/PC/getpathp.c Makefile
 	$(CC) -c $(PY_CORE_CFLAGS) -DPYTHONPATH='"$(PYTHONPATH)"' \
 		-DPREFIX='"$(prefix)"' \
 		-DEXEC_PREFIX='"$(exec_prefix)"' \
 		-DVERSION='"$(VERSION)"' \
 		-DVPATH='"$(VPATH)"' \
-		-o $@ $(srcdir)/Modules/getpath.c
+		-o $@ $(srcdir)/PC/getpathp.c
 
 Programs/python.o: $(srcdir)/Programs/python.c
 	$(MAINCC) -c $(PY_CORE_CFLAGS) -o $@ $(srcdir)/Programs/python.c
@@ -1028,7 +1065,9 @@ regen-typeslots:
 # Header files
 
 PYTHON_HEADERS= \
+        $(srcdir)/PC/wince_compatibility.h \
 		$(srcdir)/Include/Python.h \
+		$(srcdir)/WinCE/terminal.h \
 		$(srcdir)/Include/abstract.h \
 		$(srcdir)/Include/bltinmodule.h \
 		$(srcdir)/Include/boolobject.h \
@@ -1104,7 +1143,9 @@ PYTHON_HEADERS= \
 		$(srcdir)/Include/warnings.h \
 		$(srcdir)/Include/weakrefobject.h \
 		\
-		pyconfig.h \
+		$(srcdir)/PC/errmap.h \
+		$(srcdir)/PC/pyconfig.h \
+		\
 		$(PARSER_HEADERS) \
 		\
 		$(srcdir)/Include/cpython/abstract.h \
@@ -1187,7 +1228,10 @@ PYTHON_HEADERS= \
 		$(srcdir)/Include/internal/pycore_warnings.h \
 		$(DTRACE_HEADERS) \
 		\
-		$(srcdir)/Python/stdlib_module_names.h
+		$(srcdir)/Python/stdlib_module_names.h \
+		$(srcdir)/Python/importdl.h \
+		$(srcdir)/Python/thread_nt.h \
+		$(srcdir)/Python/wordcode_helpers.h
 
 $(LIBRARY_OBJS) $(MODOBJS) Programs/python.o: $(PYTHON_HEADERS)
 
@@ -1685,7 +1729,10 @@ inclinstall:
 		echo $(INSTALL_DATA) $$i $(INCLUDEPY)/internal; \
 		$(INSTALL_DATA) $$i $(DESTDIR)$(INCLUDEPY)/internal; \
 	done
-	$(INSTALL_DATA) pyconfig.h $(DESTDIR)$(CONFINCLUDEPY)/pyconfig.h
+	@if $(MACHDEP) == "wince"; then \
+		$(INSTALL_DATA) PC/pyconfig.h $(DESTDIR)$(CONFINCLUDEPY)/pyconfig.h; \
+	else	$(INSTALL_DATA) pyconfig.h $(DESTDIR)$(CONFINCLUDEPY)/pyconfig.h; \
+	fi
 
 # Install the library and miscellaneous stuff needed for extending/embedding
 # This goes into $(exec_prefix)
@@ -1905,7 +1952,7 @@ docclean:
 clean-retain-profile: pycremoval
 	find . -name '*.[oa]' -exec rm -f {} ';'
 	find . -name '*.s[ol]' -exec rm -f {} ';'
-	find . -name '*.so.[0-9]*.[0-9]*' -exec rm -f {} ';'
+	find . -name '*.dll.[0-9]*.[0-9]*' -exec rm -f {} ';'
 	find . -name '*.lst' -exec rm -f {} ';'
 	find build -name 'fficonfig.h' -exec rm -f {} ';' || true
 	find build -name '*.py' -exec rm -f {} ';' || true

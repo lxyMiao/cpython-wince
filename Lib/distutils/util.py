@@ -147,7 +147,7 @@ def change_root (new_root, pathname):
         else:
             return os.path.join(new_root, pathname[1:])
 
-    elif os.name == 'nt':
+    elif os.name in ('nt', 'ce'):
         (drive, path) = os.path.splitdrive(pathname)
         if path[0] == '\\':
             path = path[1:]

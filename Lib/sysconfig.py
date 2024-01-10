@@ -4,6 +4,17 @@ import os
 import sys
 from os.path import pardir, realpath
 
+# DONT COMPILE START
+os.name = "ce"
+sys.platform = "wince-arm"
+os.environ.update({
+    "_PYTHON_PROJECT_BASE": os.environ["_PYTHON_PROJECT_BASE"],
+    "_PYTHON_HOST_PLATFORM": "wince-arm",
+    "PYTHONPATH": os.environ["_PYTHON_PROJECT_BASE"] + "/build/lib.wince-arm-3.10:./Lib",
+    "_PYTHON_SYSCONFIGDATA_NAME": "_sysconfigdata__wince_"
+})
+# DONT COMPILE END
+
 __all__ = [
     'get_config_h_filename',
     'get_config_var',
@@ -56,8 +67,18 @@ _INSTALL_SCHEMES = {
         'scripts': '{base}/Scripts',
         'data': '{base}',
         },
+    'ce': {
+        'stdlib': '{installed_base}/Lib',
+        'platstdlib': '{base}/Lib',
+        'purelib': '{base}/Lib/site-packages',
+        'platlib': '{base}/Lib/site-packages',
+        'include': '{installed_base}/Include',
+        'platinclude': '{installed_base}/Include',
+        'scripts': '{base}/Scripts',
+        'data': '{base}',
+        },
     }
-
+# DONT COMPILE END
 
 # NOTE: site.py has copy of this function.
 # Sync it when modify this function.
@@ -73,7 +94,7 @@ def _getuserbase():
     def joinuser(*args):
         return os.path.expanduser(os.path.join(*args))
 
-    if os.name == "nt":
+    if os.name in ("nt", "ce"):
         base = os.environ.get("APPDATA") or "~"
         return joinuser(base, "Python")
 
@@ -150,7 +171,7 @@ else:
     # unable to retrieve the real program name
     _PROJECT_BASE = _safe_realpath(os.getcwd())
 
-if (os.name == 'nt' and
+if (os.name in ('nt', 'ce') and
     _PROJECT_BASE.lower().endswith(('\\pcbuild\\win32', '\\pcbuild\\amd64'))):
     _PROJECT_BASE = _safe_realpath(os.path.join(_PROJECT_BASE, pardir, pardir))
 
@@ -166,7 +187,7 @@ def _is_python_source_dir(d):
 
 _sys_home = getattr(sys, '_home', None)
 
-if os.name == 'nt':
+if os.name in ('nt', 'ce'):
     def _fix_pcbuild(d):
         if d and os.path.normcase(d).startswith(
                 os.path.normcase(os.path.join(_PREFIX, "PCbuild"))):
@@ -218,14 +239,14 @@ def _expand_vars(scheme, vars):
     _extend_dict(vars, get_config_vars())
 
     for key, value in _INSTALL_SCHEMES[scheme].items():
-        if os.name in ('posix', 'nt'):
+        if os.name in ('posix', 'nt', 'ce'):
             value = os.path.expanduser(value)
         res[key] = os.path.normpath(_subst_vars(value, vars))
     return res
 
 
 def _get_preferred_schemes():
-    if os.name == 'nt':
+    if os.name in ('nt', 'ce'):
         return {
             'prefix': 'nt',
             'home': 'posix_home',
@@ -533,7 +554,7 @@ def parse_config_h(fp, vars=None):
 def get_config_h_filename():
     """Return the path of pyconfig.h."""
     if _PYTHON_BUILD:
-        if os.name == "nt":
+        if os.name in ("nt", "ce"):
             inc_dir = os.path.join(_sys_home or _PROJECT_BASE, "PC")
         else:
             inc_dir = _sys_home or _PROJECT_BASE
@@ -610,6 +631,9 @@ def get_config_vars(*args):
             _CONFIG_VARS['py_version_nodot_plat'] = ''
 
         if os.name == 'nt':
+            _init_non_posix(_CONFIG_VARS)
+        if os.name == 'ce':
+            _init_posix(_CONFIG_VARS)
             _init_non_posix(_CONFIG_VARS)
         if os.name == 'posix':
             _init_posix(_CONFIG_VARS)

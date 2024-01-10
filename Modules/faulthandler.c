@@ -3,10 +3,14 @@
 #include "pycore_pyerrors.h"      // _Py_DumpExtensionModules
 #include "pycore_pystate.h"       // _PyThreadState_GET()
 #include "pycore_traceback.h"     // _Py_DumpTracebackThreads
-#include <signal.h>
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif
 #include <object.h>
 #include <frameobject.h>
-#include <signal.h>
+#ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+#endif
 #if defined(HAVE_PTHREAD_SIGMASK) && !defined(HAVE_BROKEN_PTHREAD_SIGMASK)
 #  include <pthread.h>
 #endif
@@ -545,7 +549,7 @@ faulthandler_enable(void)
         handler->enabled = 1;
     }
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     assert(fatal_error.exc_handler == NULL);
     fatal_error.exc_handler = AddVectoredExceptionHandler(1, faulthandler_exc_handler);
 #endif

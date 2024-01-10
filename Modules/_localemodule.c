@@ -191,6 +191,8 @@ locale_decode_monetary(PyObject *dict, struct lconv *lc)
         }
     }
 
+#endif
+#if !defined(MS_WINDOWS) || defined(MS_WINCE)
 #define GET_LOCALE_STRING(ATTR) PyUnicode_DecodeLocale(lc->ATTR, NULL)
 #else  /* MS_WINDOWS */
 /* Use _W_* fields of Windows struct lconv */
@@ -268,7 +270,7 @@ _locale_localeconv_impl(PyObject *module)
         Py_DECREF(obj); \
     } while (0)
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
 /* Use _W_* fields of Windows struct lconv */
 #define GET_LOCALE_STRING(ATTR) PyUnicode_FromWideChar(lc->_W_ ## ATTR, -1)
 #else

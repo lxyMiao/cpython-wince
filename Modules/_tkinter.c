@@ -28,6 +28,7 @@ Copyright (C) 1994 Steen Lumholt.
 
 #ifdef MS_WINDOWS
 #include <windows.h>
+#undef finally /* Needed for Windows CE */
 #endif
 
 #define CHECK_SIZE(size, elemsize) \
@@ -113,13 +114,19 @@ Copyright (C) 1994 Steen Lumholt.
 #endif
 
 #ifdef MS_WINDOWS
+#ifndef MS_WINCE
 #include <conio.h>
+#endif
 #define WAIT_FOR_STDIN
 
 static PyObject *
 _get_tcl_lib_path()
 {
     static PyObject *tcl_library_path = NULL;
+#ifdef MS_WINCE
+    static wchar_t python_dir[MAX_PATH+1];
+    static wchar_t *c;
+#endif
     static int already_checked = 0;
 
     if (already_checked == 0) {
@@ -149,6 +156,36 @@ _get_tcl_lib_path()
             /* install location doesn't exist, reset errno and see if
                we're a repository build */
             errno = 0;
+#ifdef MS_WINCE
+            if (!GetModuleFileName(NULL, python_dir, MAX_PATH+1))
+                return NULL;
+            c = wcsrchr(python_dir, L'\\');
+            if (c == NULL)
+                prefix = PyUnicode_FromWideChar(L"", -1);
+            else {
+                *c = L'\0';
+                prefix = PyUnicode_FromWideChar(python_dir, -1);
+            }
+            if (prefix != NULL) {
+                tcl_library_path = PyUnicode_FromString("\\lib\\tcl" TCL_VERSION);
+                if (tcl_library_path == NULL)
+                    return NULL;
+                tcl_library_path = PyUnicode_Concat(prefix, tcl_library_path);
+                if (tcl_library_path == NULL)
+                    return NULL;
+                stat_return_value = _Py_stat(tcl_library_path, &stat_buf);
+                if (stat_return_value == -2) {
+                    return NULL;
+                }
+                if (stat_return_value == -1) {
+                    /* install location doesn't exist, reset errno and see if
+                       we're a repository build */
+                    errno = 0;
+                }
+            } else {
+                return NULL;
+            }
+#endif
 #ifdef Py_TCLTK_DIR
             tcl_library_path = PyUnicode_FromString(
                                     Py_TCLTK_DIR "\\lib\\tcl" TCL_VERSION);

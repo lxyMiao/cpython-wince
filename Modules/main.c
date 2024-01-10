@@ -53,6 +53,7 @@ pymain_init(const _PyArgv *args)
 
     /* pass NULL as the config: config is read from command line arguments,
        environment variables, configuration files */
+
     if (args->use_bytes_argv) {
         status = PyConfig_SetBytesArgv(&config, args->argc, args->bytes_argv);
     }
@@ -192,10 +193,47 @@ pymain_header(const PyConfig *config)
         return;
     }
 
+#ifndef MS_WINCE
     fprintf(stderr, "Python %s on %s\n", Py_GetVersion(), Py_GetPlatform());
     if (config->site_import) {
         fprintf(stderr, "%s\n", COPYRIGHT);
     }
+#else
+    wchar_t *buffer;
+    char *tmpbuf;
+    size_t len = strlen(Py_GetVersion()) + strlen(Py_GetPlatform()) + strlen(COPYRIGHT) + 16;
+    buffer = (wchar_t *)calloc(len, sizeof(wchar_t));
+    if (buffer == NULL)
+        return;
+    tmpbuf = (char *)calloc(len, sizeof(char));
+    if (tmpbuf == NULL)
+    {
+        free(buffer);
+        return;
+    }
+    if (config->site_import)
+        sprintf(tmpbuf, "Python %s on %s\r\n%s\r\n", Py_GetVersion(), Py_GetPlatform(), COPYRIGHT);
+    else
+    {
+        sprintf(tmpbuf, "Python %s on %s\r\n", Py_GetVersion(), Py_GetPlatform());
+    }
+    if (!MultiByteToWideChar(
+                    CP_ACP,
+                    MB_PRECOMPOSED,
+                    tmpbuf,
+                    -1,
+                    buffer,
+                    len))
+    {
+        free(buffer);
+        free(tmpbuf);
+        return;
+    }
+    int count = 0;
+    WinCEShell_WriteConsole(NULL, buffer, len-1, &count, NULL);
+    free(buffer);
+    free(tmpbuf);
+#endif
 }
 
 
@@ -689,6 +727,7 @@ pymain_main(_PyArgv *args)
         pymain_free();
         return status.exitcode;
     }
+
     if (_PyStatus_EXCEPTION(status)) {
         pymain_exit_error(status);
     }

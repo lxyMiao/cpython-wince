@@ -31,8 +31,13 @@ import marshal
 
 
 _MS_WINDOWS = (sys.platform == 'win32')
+_MS_WINCE = sys.platform.startswith('wince')
+_MS_WINDOWS = _MS_WINDOWS or _MS_WINCE
 if _MS_WINDOWS:
-    import nt as _os
+    if not _MS_WINCE:
+        import nt as _os
+    else:
+        import ce as _os
     import winreg
 else:
     import posix as _os
@@ -1348,7 +1353,7 @@ class PathFinder:
         for hook in sys.path_hooks:
             try:
                 return hook(path)
-            except ImportError:
+            except ImportError as e:
                 continue
         else:
             return None

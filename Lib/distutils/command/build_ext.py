@@ -186,7 +186,7 @@ class build_ext(Command):
         # for extensions under windows use different directories
         # for Release and Debug builds.
         # also Python's library directory must be appended to library_dirs
-        if os.name == 'nt':
+        if os.name in ('nt', 'ce'):
             # the 'libs' directory is for binary installs - we assume that
             # must be the *native* platform.  But we don't really support
             # cross-compiling via a binary install anyway, so we let it go.
@@ -311,7 +311,7 @@ class build_ext(Command):
         # If we are cross-compiling, init the compiler now (if we are not
         # cross-compiling, init would not hurt, but people may rely on
         # late initialization of compiler even if they shouldn't...)
-        if os.name == 'nt' and self.plat_name != get_platform():
+        if os.name in ('nt', 'ce') and self.plat_name != get_platform():
             self.compiler.initialize(self.plat_name)
 
         # And make sure that any compile/link-related options (which might

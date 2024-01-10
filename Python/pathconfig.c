@@ -787,11 +787,23 @@ _Py_FindEnvConfigValue(FILE *env_file, const wchar_t *key,
         wchar_t *tmpbuffer = _Py_DecodeUTF8_surrogateescape(buffer, n, NULL);
         if (tmpbuffer) {
             wchar_t * state;
+#ifndef MS_WINCE /* FIXME-WINCE: mingw32ce CEGCC has a problem: wcstok is defined with TWO args! */
             wchar_t * tok = WCSTOK(tmpbuffer, L" \t\r\n", &state);
+#else
+            wchar_t * tok = WCSTOK(tmpbuffer, L" \t\r\n");
+#endif
             if ((tok != NULL) && !wcscmp(tok, key)) {
+#ifndef MS_WINCE
                 tok = WCSTOK(NULL, L" \t", &state);
+#else
+                tok = WCSTOK(NULL, L" \t");
+#endif
                 if ((tok != NULL) && !wcscmp(tok, L"=")) {
+#ifndef MS_WINCE
                     tok = WCSTOK(NULL, L"\r\n", &state);
+#else
+                    tok = WCSTOK(NULL, L"\r\n");
+#endif
                     if (tok != NULL) {
                         *value_p = _PyMem_RawWcsdup(tok);
                         PyMem_RawFree(tmpbuffer);

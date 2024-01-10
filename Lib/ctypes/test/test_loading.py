@@ -15,7 +15,9 @@ def setUpModule():
     global libc_name
     if os.name == "nt":
         libc_name = find_library("c")
-    elif sys.platform == "cygwin":
+    elif os.name == "ce":
+        libc_name = "coredll"
+     elif sys.platform == "cygwin":
         libc_name = "cygwin1.dll"
     else:
         libc_name = find_library("c")
@@ -51,7 +53,7 @@ class LoaderTest(unittest.TestCase):
                 cdll.LoadLibrary(lib)
                 CDLL(lib)
 
-    @unittest.skipUnless(os.name == "nt",
+    @unittest.skipUnless(os.name in ("nt", "ce"),
                          'test specific to Windows')
     def test_load_library(self):
         # CRT is no longer directly loadable. See issue23606 for the
@@ -68,6 +70,13 @@ class LoaderTest(unittest.TestCase):
             WinDLL("kernel32").GetModuleHandleW
             # embedded null character
             self.assertRaises(ValueError, windll.LoadLibrary, "kernel32\0")
+        elif os.name == "ce":
+            windll.coredll.GetModuleHandleW
+            windll["coredll"].GetModuleHandleW
+            windll.LoadLibrary("coredll").GetModuleHandleW
+            WinDLL("coredll").GetModuleHandleW
+            # embedded null character
+            self.assertRaises(ValueError, windll.LoadLibrary, "coredll\0")
 
     @unittest.skipUnless(os.name == "nt",
                          'test specific to Windows')
@@ -117,7 +126,7 @@ class LoaderTest(unittest.TestCase):
         self.assertEqual(0, call_function(proc, (None,)))
 
     @unittest.skipUnless(os.name == "nt",
-                         'test specific to Windows')
+                         'test specific to Windows') # I'm not sure wether needed for CE or not.
     def test_load_dll_with_flags(self):
         _sqlite3 = import_helper.import_module("_sqlite3")
         src = _sqlite3.__file__

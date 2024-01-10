@@ -1,9 +1,9 @@
-r"""OS routines for NT or Posix depending on what system we're on.
+r"""OS routines for NT or CE or Posix depending on what system we're on.
 
 This exports:
-  - all functions from posix or nt, e.g. unlink, stat, etc.
+  - all functions from posix, nt or ce, e.g. unlink, stat, etc.
   - os.path is either posixpath or ntpath
-  - os.name is either 'posix' or 'nt'
+  - os.name is either 'posix' or 'nt' or 'ce'
   - os.curdir is a string representing the current directory (always '.')
   - os.pardir is a string representing the parent directory (always '..')
   - os.sep is the (or a most common) pathname separator ('/' or '\\')
@@ -86,6 +86,27 @@ elif 'nt' in _names:
 
     try:
         from nt import _have_functions
+    except ImportError:
+        pass
+
+elif 'ce' in _names:
+    name = 'ce'
+    linesep = '\r\n'
+    from ce import *
+    try:
+        from ce import _exit
+        __all__.append('_exit')
+    except ImportError:
+        pass
+    # We can use the standard Windows path.
+    import ntpath as path
+
+    import ce
+    __all__.extend(_get_exports_list(ce))
+    del ce
+
+    try:
+        from ce import _have_functions
     except ImportError:
         pass
 
@@ -599,7 +620,7 @@ def _execvpe(file, args, env=None):
         return
     saved_exc = None
     path_list = get_exec_path(env)
-    if name != 'nt':
+    if name not in ('nt', 'ce'):
         file = fsencode(file)
         path_list = map(fsencode, path_list)
     for dir in path_list:
@@ -736,7 +757,7 @@ class _Environ(MutableMapping):
         return new
 
 def _createenviron():
-    if name == 'nt':
+    if name in ('nt', 'ce'):
         # Where Env Var Names Must Be UPPERCASE
         def check_str(value):
             if not isinstance(value, str):
@@ -775,7 +796,7 @@ def getenv(key, default=None):
     key, default and the result are str."""
     return environ.get(key, default)
 
-supports_bytes_environ = (name != 'nt')
+supports_bytes_environ = (name not in ('nt', 'ce'))
 __all__.extend(("getenv", "supports_bytes_environ"))
 
 if supports_bytes_environ:
@@ -1005,7 +1026,7 @@ if sys.platform != 'vxworks':
             returncode = self._proc.wait()
             if returncode == 0:
                 return None
-            if name == 'nt':
+            if name in ('nt', 'ce'):
                 return returncode
             else:
                 return returncode << 8  # Shift left to match old behavior
@@ -1086,7 +1107,7 @@ class PathLike(abc.ABC):
     __class_getitem__ = classmethod(GenericAlias)
 
 
-if name == 'nt':
+if name in ('nt', 'ce'):
     class _AddedDllDirectory:
         def __init__(self, path, cookie, remove_dll_directory):
             self.path = path

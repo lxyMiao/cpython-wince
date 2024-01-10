@@ -11,6 +11,8 @@ forgotten) from the programmer.
 #include "Python.h"
 #include "windows.h"
 
+#define MS_DLL_ID "3.10"
+
 #ifdef Py_ENABLE_SHARED
 
 // Python Globals

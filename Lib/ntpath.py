@@ -23,6 +23,8 @@ import stat
 import genericpath
 from genericpath import *
 
+if 'ce' in sys.builtin_module_names:
+    defpath = '\\Windows'
 
 __all__ = ["normcase","isabs","join","splitdrive","split","splitext",
            "basename","dirname","commonprefix","getsize","getmtime",

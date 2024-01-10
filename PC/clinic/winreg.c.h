@@ -429,7 +429,11 @@ winreg_DeleteKeyEx(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {"O&O&|ii:DeleteKeyEx", _keywords, 0};
     HKEY key;
     const Py_UNICODE *sub_key = NULL;
+#ifdef KEY_WOW64_64KEY
     REGSAM access = KEY_WOW64_64KEY;
+#elif defined KEY_WOW64_32KEY
+    REGSAM access = KEY_WOW64_32KEY;
+#endif
     int reserved = 0;
 
     if (!_PyArg_ParseStackAndKeywords(args, nargs, kwnames, &_parser,

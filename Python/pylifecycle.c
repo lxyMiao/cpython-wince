@@ -32,10 +32,15 @@
 #ifdef MS_WINDOWS
 #  undef BYTE
 #  include "windows.h"
-
+#ifndef MS_WINCE
    extern PyTypeObject PyWindowsConsoleIO_Type;
 #  define PyWindowsConsoleIO_Check(op) \
        (PyObject_TypeCheck((op), &PyWindowsConsoleIO_Type))
+#else
+   extern PyTypeObject PyWinCEConsoleIO_Type;
+#  define PyWinCEConsoleIO_Check(op) \
+       (PyObject_TypeCheck((op), &PyWinCEConsoleIO_Type))
+#endif
 #endif
 
 #define PUTS(fd, str) _Py_write_noraise(fd, str, (int)strlen(str))
@@ -1108,7 +1113,6 @@ init_interp_main(PyThreadState *tstate)
 
     if (is_main_interp) {
         if (_PySignal_Init(config->install_signal_handlers) < 0) {
-            return _PyStatus_ERR("can't initialize signals");
         }
 
         if (_PyTraceMalloc_Init(config->tracemalloc) < 0) {
@@ -2115,16 +2119,21 @@ is_valid_fd(int fd)
    Only use dup() on platforms where dup() is enough to detect invalid FD in
    corner cases: on Linux and Windows (bpo-32849). */
 #if defined(__linux__) || defined(MS_WINDOWS)
-    if (fd < 0) {
+    if (fd < 0)
+    {
         return 0;
     }
     int fd2;
 
     _Py_BEGIN_SUPPRESS_IPH
+#ifndef MS_WINCE
     fd2 = dup(fd);
     if (fd2 >= 0) {
         close(fd2);
     }
+#else
+    fd2 = fd;
+#endif
     _Py_END_SUPPRESS_IPH
 
     return (fd2 >= 0);
@@ -2186,9 +2195,15 @@ create_stdio(const PyConfig *config, PyObject* io,
     }
 
 #ifdef MS_WINDOWS
+#ifndef MS_WINCE
     /* Windows console IO is always UTF-8 encoded */
     if (PyWindowsConsoleIO_Check(raw))
         encoding = L"utf-8";
+#else
+    /* Windows CE console IO is always UTF-8 encoded */
+    if (PyWinCEConsoleIO_Check(raw))
+        encoding = L"utf-8";
+#endif
 #endif
 
     text = PyUnicode_FromString(name);
@@ -2487,7 +2502,7 @@ fatal_output_debug(const char *msg)
     size_t buflen = Py_ARRAY_LENGTH(buffer) - 1;
     size_t msglen;
 
-    OutputDebugStringW(L"Fatal Python error: ");
+    OutputDebugStringW(L"Fatal Python Error:");
 
     msglen = strlen(msg);
     while (msglen) {

@@ -19,6 +19,7 @@
 int
 dup2(int fd1, int fd2)
 {
+#ifndef _WIN32_WCE
     if (fd1 != fd2) {
         if (fcntl(fd1, F_GETFL) < 0)
             return BADEXIT;
@@ -28,4 +29,7 @@ dup2(int fd1, int fd2)
             return BADEXIT;
     }
     return fd2;
+#else
+    return BADEXIT;
+#endif
 }

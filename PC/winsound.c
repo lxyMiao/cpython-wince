@@ -39,6 +39,13 @@
 #include <windows.h>
 #include <mmsystem.h>
 
+#ifdef MS_WINCE
+
+#define SND_PURGE 0
+#define SND_APPLICATION 0
+
+#endif /* MS_WINCE */
+
 PyDoc_STRVAR(sound_module_doc,
 "PlaySound(sound, flags) - play a sound\n"
 "SND_FILENAME - sound is a wav file name\n"
@@ -148,7 +155,11 @@ winsound_Beep_impl(PyObject *module, int frequency, int duration)
     }
 
     Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
     ok = Beep(frequency, duration);
+#else
+    ok = FALSE;
+#endif
     Py_END_ALLOW_THREADS
     if (!ok) {
         PyErr_SetString(PyExc_RuntimeError,"Failed to beep");

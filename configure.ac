@@ -403,6 +403,10 @@ then
 	*-*-vxworks*)
 	    ac_sys_system=VxWorks
 	    ;;
+	*-*-mingw32ce)
+	    ac_sys_system=WinCE
+	    BASECPPFLAGS="-IPC $(BASECPPFLAGS)"
+	    ;;
 	*)
 		# for now, limit cross builds to known configurations
 		MACHDEP="unknown"
@@ -429,6 +433,7 @@ then
 	linux*) MACHDEP="linux";;
 	cygwin*) MACHDEP="cygwin";;
 	darwin*) MACHDEP="darwin";;
+	wince*) MACHDEP="wince";;
 	'')	MACHDEP="unknown";;
     esac
 fi
@@ -451,6 +456,15 @@ if test "$cross_compiling" = yes; then
 		;;
 	*-*-vxworks*)
 		_host_cpu=$host_cpu
+		;;
+	*-*-mingw32ce)
+		case "$host_cpu" in
+		arm*)
+			_host_cpu=arm
+			;;
+		*)
+			_host_cpu=$host_cpu
+		esac
 		;;
 	*)
 		# for now, limit cross builds to known configurations
@@ -531,7 +545,10 @@ case $ac_sys_system/$ac_sys_release in
   VxWorks/*)
     define_xopen_source=no
     ;;
-
+  # Windows CE
+  WinCE/*)
+    define_xopen_source=no
+    ;;
   # On HP-UX, defining _XOPEN_SOURCE to 600 or greater hides
   # chroot() and other functions
   hp*|HP*)
@@ -1085,7 +1102,7 @@ AC_ARG_ENABLE(shared,
 if test -z "$enable_shared"
 then
   case $ac_sys_system in
-  CYGWIN*)
+  CYGWIN|WinCE*)
     enable_shared="yes";;
   *)
     enable_shared="no";;
@@ -1135,10 +1152,10 @@ if test $enable_shared = "yes"; then
   PY_ENABLE_SHARED=1
   AC_DEFINE(Py_ENABLE_SHARED, 1, [Defined if Python is built as a shared library.])
   case $ac_sys_system in
-    CYGWIN*)
-          LDLIBRARY='libpython$(LDVERSION).dll.a'
-          DLLLIBRARY='libpython$(LDVERSION).dll'
-          ;;
+    CYGWIN*|WinCE*)
+      LDLIBRARY='libpython$(LDVERSION).dll.a'
+      DLLLIBRARY='libpython$(LDVERSION).dll'
+      ;;
     SunOS*)
 	  LDLIBRARY='libpython$(LDVERSION).so'
 	  BLDLIBRARY='-Wl,-R,$(LIBDIR) -L. -lpython$(LDVERSION)'
@@ -1185,7 +1202,7 @@ if test $enable_shared = "yes"; then
 else # shared is disabled
   PY_ENABLE_SHARED=0
   case $ac_sys_system in
-    CYGWIN*)
+    CYGWIN*|WinCE*)
           BLDLIBRARY='$(LIBRARY)'
           LDLIBRARY='libpython$(LDVERSION).dll.a'
           ;;
@@ -1234,7 +1251,7 @@ AC_PROG_MKDIR_P
 AC_SUBST(LN)
 if test -z "$LN" ; then
 	case $ac_sys_system in
-		CYGWIN*) LN="ln -s";;
+		CYGWIN*|WinCE*) LN="ln -s";;
 		*) LN=ln;;
 	esac
 fi
@@ -1504,6 +1521,12 @@ case $CC in
 	  fi
         fi
         ;;
+      WinCE*)
+        PGO_PROF_GEN_FLAG=""
+	PGO_PROF_USE_FLAG=""
+	LLVM_PROF_MERGER="true"
+	LLVM_PROF_FILE=""
+	;;
       *)
         PGO_PROF_GEN_FLAG="-fprofile-generate"
         PGO_PROF_USE_FLAG="-fprofile-use -fprofile-correction"
@@ -2631,7 +2654,7 @@ if test -z "$SHLIB_SUFFIX"; then
 	  		*)    SHLIB_SUFFIX=.sl;;
 		esac
 		;;
-	CYGWIN*)   SHLIB_SUFFIX=.dll;;
+	CYGWIN*|WinCE*)   SHLIB_SUFFIX=.dll;;
 	*)	   SHLIB_SUFFIX=.so;;
 	esac
 fi
@@ -2756,6 +2779,9 @@ then
 	CYGWIN*)
 		LDSHARED="gcc -shared -Wl,--enable-auto-image-base"
 		LDCXXSHARED="g++ -shared -Wl,--enable-auto-image-base";;
+	WinCE*)
+		LDSHARED='$(CC) -shared -Wl,--enable-auto-image-base'
+		LDCXXSHARED='$(CXX) -shared -Wl,--enable-auto-image-base';;
 	*)	LDSHARED="ld";;
 	esac
 fi
@@ -2793,6 +2819,8 @@ then
 		fi;;
 	VxWorks*)
 		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic"
+		;;
+	WinCE*) CCSHARED="";;
 	esac
 fi
 AC_MSG_RESULT($CCSHARED)
@@ -2848,7 +2876,7 @@ then
 			LINKFORSHARED="-Xlinker --export-dynamic"
 		    fi;;
 		  esac;;
-	CYGWIN*)
+	CYGWIN*|WinCE*)
 		if test $enable_shared = "no"
 		then
 			LINKFORSHARED='-Wl,--out-implib=$(LDLIBRARY)'
@@ -3673,6 +3701,7 @@ if test -z "$DYNLOADFILE"
 then
 	case $ac_sys_system/$ac_sys_release in
 	hp*|HP*) DYNLOADFILE="dynload_hpux.o";;
+	WinCE*) DYNLOADFILE="dynload_win.o";;
 	*)
 	# use dynload_shlib.c and dlopen() if we have it; otherwise stub
 	# out any dynamic loading
