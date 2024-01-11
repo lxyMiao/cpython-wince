@@ -7,6 +7,7 @@ export AR=$TOOL_PREFIX-ar && \
 export RANLIB=$TOOL_PREFIX-ranlib && \
 export LD=$TOOL_PREFIX-ld && \
 export READELF=$TOOL_PREFIX-readelf && \
+export WINDRES=$TOOL_PREFIX-windres && \
 export LIBS="-lcoredll6 -lcoredll -lm -laygshell -lws2 -lcommctrl" && \
 export CFLAGS="-march=armv5tej -mcpu=arm926ej-s -Wno-attributes -DWC_NO_BEST_FIT_CHARS -D_WIN32_WCE=0x0600 -D_MAX_PATH=260 -D_UNICODE -DUNICODE -DPy_HAVE_ZLIB=1 -DLACK_OF_CRYPT_API -fvisibility=hidden -fno-pic -I./zlib-src -I./Modules/_ctypes/libffi_arm_wince" && \
 export LDFLAGS="-fno-strict-aliasing" && \
@@ -39,6 +40,7 @@ fi
 echo > make.log
 
 make distclean
+
 
 ac_cv_pthread_is_default=yes ac_cv_cxx_thread=yes ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no ac_cv_have_long_long_format=yes \
 ac_cv_enable_implicit_function_declaration_error=no \

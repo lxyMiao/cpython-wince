@@ -1027,6 +1027,7 @@ AC_MSG_RESULT($LIBRARY)
 #
 # LDVERSION is the shared library version number, normally the Python version
 # with the ABI build flags appended.
+
 AC_SUBST(LDLIBRARY)
 AC_SUBST(DLLLIBRARY)
 AC_SUBST(BLDLIBRARY)
@@ -1042,6 +1043,17 @@ DLLLIBRARY=''
 LDLIBRARYDIR=''
 RUNSHARED=''
 LDVERSION="$VERSION"
+
+# WINDRES is needed to check if PC/python_exe.rc is usable or not.
+AC_CHECK_TOOLS([WINDRES], [windres], [:])
+case $ac_sys_system in
+  WinCE*)
+    case "$WINDRES" in
+      windres|:)
+        WINDRES=""
+    esac
+esac
+AC_SUBST(WINDRES)
 
 # LINKCC is the command that links the python executable -- default is $(CC).
 # If CXX is set, and if it is needed to link a main function that was
@@ -1152,9 +1164,16 @@ if test $enable_shared = "yes"; then
   PY_ENABLE_SHARED=1
   AC_DEFINE(Py_ENABLE_SHARED, 1, [Defined if Python is built as a shared library.])
   case $ac_sys_system in
-    CYGWIN*|WinCE*)
+    CYGWIN*)
       LDLIBRARY='libpython$(LDVERSION).dll.a'
       DLLLIBRARY='libpython$(LDVERSION).dll'
+      ;;
+    WinCE*)
+      LDLIBRARY='libpython$(LDVERSION).dll.a'
+      DLLLIBRARY='libpython$(LDVERSION).dll'
+      if test ! $WINDRES = ""; then
+        BLDLIBRARY='$(LDLIBRARY) PC/python_exe.o'
+      fi
       ;;
     SunOS*)
 	  LDLIBRARY='libpython$(LDVERSION).so'
@@ -1189,23 +1208,30 @@ if test $enable_shared = "yes"; then
 	  RUNSHARED=SHLIB_PATH=`pwd`${SHLIB_PATH:+:${SHLIB_PATH}}
 	  ;;
     Darwin*)
-    	LDLIBRARY='libpython$(LDVERSION).dylib'
-	BLDLIBRARY='-L. -lpython$(LDVERSION)'
-	RUNSHARED=DYLD_LIBRARY_PATH=`pwd`${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}
-	;;
+      LDLIBRARY='libpython$(LDVERSION).dylib'
+	  BLDLIBRARY='-L. -lpython$(LDVERSION)'
+	  RUNSHARED=DYLD_LIBRARY_PATH=`pwd`${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}
+	  ;;
     AIX*)
-	LDLIBRARY='libpython$(LDVERSION).so'
-	RUNSHARED=LIBPATH=`pwd`${LIBPATH:+:${LIBPATH}}
-	;;
-
+	  LDLIBRARY='libpython$(LDVERSION).so'
+	  RUNSHARED=LIBPATH=`pwd`${LIBPATH:+:${LIBPATH}}
+	  ;;
   esac
 else # shared is disabled
   PY_ENABLE_SHARED=0
   case $ac_sys_system in
-    CYGWIN*|WinCE*)
+    CYGWIN*)
           BLDLIBRARY='$(LIBRARY)'
           LDLIBRARY='libpython$(LDVERSION).dll.a'
           ;;
+    WinCE*)
+          if test $WINDRES = ""; then
+            BLDLIBRARY='$(LIBRARY)'
+          else
+            BLDLIBRARY='$(LDLIBRARY) PC/python_exe.o'
+          fi
+          LDLIBRARY='libpython$(LDVERSION).dll.a'
+          ;; 
   esac
 fi
 
@@ -1234,7 +1260,6 @@ if test "$cross_compiling" = yes; then
     esac
 fi
 AC_SUBST(READELF)
-
 
 case $MACHDEP in
 hp*|HP*)
@@ -6020,6 +6045,10 @@ if test "$PY_ENABLE_SHARED" = 1 || test "$enable_framework" ; then
 else
     LIBRARY_DEPS="\$(LIBRARY) $LIBRARY_DEPS"
 fi
+case $ac_sys_system in
+    WinCE*)
+        LIBRARY_DEPS="$LIBRARY_DEPS PC/python_exe.o" # resource file for python for WinCE
+esac
 AC_SUBST(STATIC_LIBPYTHON)
 AC_SUBST(LIBRARY_DEPS)
 

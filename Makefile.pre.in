@@ -39,6 +39,7 @@ MAINCC=		@MAINCC@
 LINKCC=		@LINKCC@
 AR=		@AR@
 READELF=	@READELF@
+WINDRES=	@WINDRES@
 SOABI=		@SOABI@
 LDVERSION=	@LDVERSION@
 LIBPYTHON=	@LIBPYTHON@
@@ -872,6 +873,10 @@ Python/initconfig.o: $(srcdir)/Python/initconfig.c
 		-o $@ $(srcdir)/Python/initconfig.c
 
 $(IO_OBJS): $(IO_H)
+
+PC/python_exe.o: $(srcdir)/PC/python_exe.rc $(srcdir)/PCbuild/field3.py $(srcdir)/PC/python_ver_rc.h
+	(echo "/*" && $(PYTHON_FOR_BUILD) $(srcdir)/PCbuild/field3.py && cat $(srcdir)/PC/python_exe.rc) \
+		| $(WINDRES) --input-format=rc -I$(srcdir)/PC -I$(srcdir)/Include -o $@
 
 .PHONY: regen-pegen-metaparser
 regen-pegen-metaparser:
