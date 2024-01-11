@@ -1,5 +1,5 @@
 export HOST_ARCH=arm-none-linux-gnu && \
-export TOOL_PREFIX=/usr/bin/arm-mingw32ce && \
+export TOOL_PREFIX=${TOOL_PREFIX:-/usr/bin/arm-mingw32ce} && \
 export CC=$TOOL_PREFIX-gcc && \
 export CXX=$TOOL_PREFIX-g++ && \
 export CPP="$TOOL_PREFIX-g++ -E" && \
