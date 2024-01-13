@@ -11,11 +11,25 @@ import sys
 
 sys.path = sys.path[:3]
 
+pydebug = False
+
+with open(os.environ["_PYTHON_PROJECT_BASE"]+"/config.log", mode="r") as f:
+    while True:
+        line = f.readline()
+        if len(line) == 0:
+            break
+        if line.endswith("checking for --with-pydebug\n"):
+            line = f.readline()
+            if len(line) == 0:
+                break
+            pydebug = line.endswith("yes\n")
+            break 
+
 tool_prefix = os.environ.get("TOOL_PREFIX", "/usr/bin/arm-mingw32ce")
 os.environ.update({
-        "CC": f"{tool_prefix}-gcc libpython3.10.dll",
-        "LDSHARED": f"{tool_prefix}-gcc -shared libpython3.10.dll --enable-auto-import",
-        "OPT": "-DNDEBUG -g -fweapv -O3 -Wall libpython3.10.dll --enable-auto-import",
+        "CC": f"{tool_prefix}-gcc " + ("libpython3.10.dll" if not pydebug else "libpython3.10d.dll"),
+        "LDSHARED": f"{tool_prefix}-gcc -shared "+ ("libpython3.10.dll" if not pydebug else "libpython3.10d.dll") + " --enable-auto-import",
+        "OPT": (os.environ["OPT"] + " " if "OPT" in os.environ else "") + ("libpython3.10.dll" if not pydebug else "libpython3.10d.dll") + " --enable-auto-import",
         "_PYTHON_PROJECT_BASE": os.environ["_PYTHON_PROJECT_BASE"],
         "_PYTHON_HOST_PLATFORM": "wince-arm",
         "PYTHONPATH": os.environ["_PYTHON_PROJECT_BASE"] + "/build/lib.wince-arm-3.10:./Lib",

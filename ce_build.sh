@@ -1,3 +1,5 @@
+#!/bin/bash
+
 export HOST_ARCH=arm-none-linux-gnu && \
 export TOOL_PREFIX=${TOOL_PREFIX:-/usr/bin/arm-mingw32ce} && \
 export CC=$TOOL_PREFIX-gcc && \
@@ -14,6 +16,26 @@ export LDFLAGS="-fno-strict-aliasing" && \
 export CPPFLAGS="-fvisibility=hidden" && \
 export LIBFFI_INCLUDEDIR="Modules/_ctypes/libffi-arm-wince" && \
 export ZLIBDIR="./zlib-src"
+
+PY_DEBUG='no';
+
+while (( $# > 0 ))
+do
+    case $1 in
+        -d|--debug)
+            PY_DEBUG='yes';
+            ;;
+        -*)
+            echo "unknown option: "$1;
+            exit 1;
+            ;;
+        *)
+            echo "unexpected argument: "$1;
+            exit 1;
+            ;;
+    esac
+    shift
+done
 
 
 build_tkinter='yes' # set 'no' or '' if you do not need tkinter being built.
@@ -41,7 +63,6 @@ echo > make.log
 
 make distclean
 
-
 ac_cv_pthread_is_default=yes ac_cv_cxx_thread=yes ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no ac_cv_have_long_long_format=yes \
 ac_cv_enable_implicit_function_declaration_error=no \
 ./configure --prefix=$PWD/build \
@@ -52,7 +73,7 @@ ac_cv_enable_implicit_function_declaration_error=no \
 --with-builtin-hashlib-hashes \
 --without-c-locale-coercion \
 --includedir="$PWD/PC" \
---without-pydebug \
+--with-pydebug=$PY_DEBUG \
 --with-tcltk-includes="$TCLTK_INCS" \
 --with-tcltk-libs="$TCLTK_LIBS" \
 --enable-optimizations |& tee make.log -a || err
