@@ -1,3 +1,4 @@
+#!/bin/bash
 
 rm -rf wince_build
 mkdir wince_build

@@ -1,3 +1,5 @@
+#!/bin/bash
+
 rm pyconfig.tmp pyconfig.pre.tmp
 rm zip.list
 rm -rf wince_build
