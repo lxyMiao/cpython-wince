@@ -44,8 +44,6 @@ import warnings
 from glob import glob, escape
 import _osx_support
 
-print(os.name)
-
 try:
     import subprocess
     del subprocess
@@ -76,7 +74,6 @@ with warnings.catch_warnings():
         "The distutils.sysconfig module is deprecated, use sysconfig instead",
         DeprecationWarning
     )
-    print(sys.path)
     from Lib.distutils.command.build_ext import build_ext
     from Lib.distutils.command.build_scripts import build_scripts
     from Lib.distutils.command.install import install
