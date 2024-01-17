@@ -59,9 +59,7 @@ if [ ! -d build ]; then
     mkdir build
 fi
 
-echo > make.log
-
-make distclean
+touch make.log
 
 ac_cv_pthread_is_default=yes ac_cv_cxx_thread=yes ac_cv_file__dev_ptmx=no ac_cv_file__dev_ptc=no ac_cv_have_long_long_format=yes \
 ac_cv_enable_implicit_function_declaration_error=no \
