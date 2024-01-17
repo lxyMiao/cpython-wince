@@ -1,9 +1,6 @@
 #!/bin/bash
 
-rm pyconfig.tmp pyconfig.pre.tmp
-rm zip.list
-rm -rf wince_build
-rm make.log
+rm -rf pyconfig.tmp pyconfig.pre.tmp zip.list wince_build make.log
 
 if test -e Makefile; then
     make distclean;
