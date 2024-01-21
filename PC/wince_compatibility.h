@@ -596,7 +596,8 @@ WINCE_PyAPI_FUNC(int) wince_isctype(int ch, int classification);
 #define SIGINT 0
 
 /* Environment variables are not supported */
-#define GetEnvironmentVariable(name, buf, size) (0)
+WINCE_PyAPI_FUNC(DWORD) wince_GetEnvironmentVariable();
+#define GetEnvironmentVariable(name, buf, size) wince_GetEnvironmentVariable()
 #define GetEnvironmentVariableW GetEnvironmentVariable
 /* When setting environment variables, do nothing and succeed */
 #define SetEnvironmentVariableA(n, v) (TRUE)
