@@ -111,7 +111,7 @@ typedef long HRESULT;
 #endif
 void wince_errno_new_thread(int *errno_pointer);
 void wince_errno_thread_exit(void);
-int *(*wince_errno_pointer_function)(void);
+WINCE_PyAPI_DATA(int) *(*wince_errno_pointer_function)(void);
 #define	errno (*(*wince_errno_pointer_function)())
 
 #define _errno errno
