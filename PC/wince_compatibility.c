@@ -2563,7 +2563,7 @@ HRESULT
 PathCchCanonicalizeEx(wchar_t *pszPathOut, size_t cchPathOut, wchar_t *pszPathIn, unsigned long dwFlags)
 {
         /* read handed path from the end to the begining so we can make the result without going back */
-	    if (!dwFlags & PATHCCH_ALLOW_LONG_PATHS && cchPathOut > MAX_PATH)
+	    if (!dwFlags & PATHCCH_ALLOW_LONG_PATHS && cchPathOut > MAX_PATH+1)
 		    return E_INVALIDARG;
 
 
@@ -2671,9 +2671,16 @@ done:
 HRESULT
 PathCchCombineEx(wchar_t *pszPathOut, size_t cchPathOut, wchar_t *pszPathIn, wchar_t *pszMore, unsigned long dwFlags)
 {
-	wchar_t combined[wcslen(pszPathIn)+1+wcslen(pszMore)];
-	swprintf(combined, L"%s\\%s", pszPathIn, pszMore);
-	return PathCchCanonicalizeEx(pszPathOut, cchPathOut, &combined, dwFlags);
+	HRESULT result;
+	size_t combined_length = wcslen(pszPathIn)+1+wcslen(pszMore)+1;
+	wchar_t *combined;
+	combined = (wchar_t *)calloc(combined_length, sizeof(wchar_t));
+	if (combined == NULL)
+		return E_OUTOFMEMORY;
+	swprintf(combined, L"%ls\\%ls", pszPathIn, pszMore);
+	result = PathCchCanonicalizeEx(pszPathOut, cchPathOut, combined, dwFlags);
+	free(combined);
+	return result;
 }
 
 HRESULT
