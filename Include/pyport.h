@@ -240,7 +240,11 @@ typedef int Py_ssize_clean_t;
  *******************************/
 
 #ifdef HAVE_SYS_STAT_H
+#ifndef MS_WINCE
 #include <sys/stat.h>
+#else
+#include <sys/types.h>
+#endif
 #elif defined(HAVE_STAT_H)
 #include <stat.h>
 #endif

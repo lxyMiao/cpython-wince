@@ -8,11 +8,41 @@ import logging
 import os
 import re
 import sys
+
+sys.path = sys.path[:3]
+
+pydebug = False
+
+with open(os.environ["_PYTHON_PROJECT_BASE"]+"/config.log", mode="r") as f:
+    while True:
+        line = f.readline()
+        if len(line) == 0:
+            break
+        if line.endswith("checking for --with-pydebug\n"):
+            line = f.readline()
+            if len(line) == 0:
+                break
+            pydebug = line.endswith("yes\n")
+            break 
+
+tool_prefix = os.environ.get("TOOL_PREFIX", "/usr/bin/arm-mingw32ce")
+os.environ.update({
+        "CC": f"{tool_prefix}-gcc " + ("libpython3.10.dll" if not pydebug else "libpython3.10d.dll"),
+        "LDSHARED": f"{tool_prefix}-gcc -shared "+ ("libpython3.10.dll" if not pydebug else "libpython3.10d.dll") + " --enable-auto-import",
+        "OPT": (os.environ["OPT"] + " " if "OPT" in os.environ else "") + ("libpython3.10.dll" if not pydebug else "libpython3.10d.dll") + " --enable-auto-import",
+        "_PYTHON_PROJECT_BASE": os.environ["_PYTHON_PROJECT_BASE"],
+        "_PYTHON_HOST_PLATFORM": "wince-arm",
+        "PYTHONPATH": os.environ["_PYTHON_PROJECT_BASE"] + "/build/lib.wince-arm-3.10:./Lib",
+        "_PYTHON_SYSCONFIGDATA_NAME": "_sysconfigdata__wince_",
+})
+
+os.name = "ce"
+sys.platform = "wince-arm"
+
 import sysconfig
 import warnings
 from glob import glob, escape
 import _osx_support
-
 
 try:
     import subprocess
@@ -44,15 +74,13 @@ with warnings.catch_warnings():
         "The distutils.sysconfig module is deprecated, use sysconfig instead",
         DeprecationWarning
     )
-
-    from distutils.command.build_ext import build_ext
-    from distutils.command.build_scripts import build_scripts
-    from distutils.command.install import install
-    from distutils.command.install_lib import install_lib
-    from distutils.core import Extension, setup
-    from distutils.errors import CCompilerError, DistutilsError
-    from distutils.spawn import find_executable
-
+    from Lib.distutils.command.build_ext import build_ext
+    from Lib.distutils.command.build_scripts import build_scripts
+    from Lib.distutils.command.install import install
+    from Lib.distutils.command.install_lib import install_lib
+    from Lib.distutils.core import Extension, setup
+    from Lib.distutils.errors import CCompilerError, DistutilsError
+    from Lib.distutils.spawn import find_executable
 
 # Compile extensions used to test Python?
 TEST_EXTENSIONS = (sysconfig.get_config_var('TEST_MODULES') == 'yes')
@@ -81,7 +109,8 @@ def get_platform():
 
 CROSS_COMPILING = ("_PYTHON_HOST_PLATFORM" in os.environ)
 HOST_PLATFORM = get_platform()
-MS_WINDOWS = (HOST_PLATFORM == 'win32')
+WINCE = ('wince' in HOST_PLATFORM)
+MS_WINDOWS = (HOST_PLATFORM == 'win32') or WINCE
 CYGWIN = (HOST_PLATFORM == 'cygwin')
 MACOS = (HOST_PLATFORM == 'darwin')
 AIX = (HOST_PLATFORM.startswith('aix'))
@@ -950,8 +979,8 @@ class PyBuildExt(build_ext):
         self.add(Extension("_heapq", ["_heapqmodule.c"],
                            extra_compile_args=['-DPy_BUILD_CORE_MODULE']))
         # C-optimized pickle replacement
-        self.add(Extension("_pickle", ["_pickle.c"],
-                           extra_compile_args=['-DPy_BUILD_CORE_MODULE']))
+        #self.add(Extension("_pickle", ["_pickle.c"],
+        #                   extra_compile_args=['-DPy_BUILD_CORE_MODULE']))
         # _json speedups
         self.add(Extension("_json", ["_json.c"],
                            extra_compile_args=['-DPy_BUILD_CORE_MODULE']))
@@ -985,31 +1014,31 @@ class PyBuildExt(build_ext):
         if (self.config_h_vars.get('FLOCK_NEEDS_LIBBSD', False)):
             # May be necessary on AIX for flock function
             libs = ['bsd']
-        self.add(Extension('fcntl', ['fcntlmodule.c'],
-                           libraries=libs))
+        #self.add(Extension('fcntl', ['fcntlmodule.c'],
+        #                   libraries=libs))
         # pwd(3)
-        self.add(Extension('pwd', ['pwdmodule.c']))
+        #self.add(Extension('pwd', ['pwdmodule.c']))
         # grp(3)
-        if not VXWORKS:
-            self.add(Extension('grp', ['grpmodule.c']))
+        #if not VXWORKS:
+        #    self.add(Extension('grp', ['grpmodule.c']))
         # spwd, shadow passwords
-        if (self.config_h_vars.get('HAVE_GETSPNAM', False) or
-                self.config_h_vars.get('HAVE_GETSPENT', False)):
-            self.add(Extension('spwd', ['spwdmodule.c']))
+        #if (self.config_h_vars.get('HAVE_GETSPNAM', False) or
+        #        self.config_h_vars.get('HAVE_GETSPENT', False)):
+        #    self.add(Extension('spwd', ['spwdmodule.c']))
         # AIX has shadow passwords, but access is not via getspent(), etc.
         # module support is not expected so it not 'missing'
-        elif not AIX:
-            self.missing.append('spwd')
+        #elif not AIX:
+        #    self.missing.append('spwd')
 
         # select(2); not on ancient System V
-        self.add(Extension('select', ['selectmodule.c']))
+        #self.add(Extension('select', ['selectmodule.c']))
 
         # Memory-mapped files (also works on Win32).
         self.add(Extension('mmap', ['mmapmodule.c']))
 
         # Lance Ellinghaus's syslog module
         # syslog daemon interface
-        self.add(Extension('syslog', ['syslogmodule.c']))
+        #self.add(Extension('syslog', ['syslogmodule.c']))
 
         # Python interface to subinterpreter C-API.
         self.add(Extension('_xxsubinterpreters', ['_xxsubinterpretersmodule.c']))
@@ -1035,8 +1064,10 @@ class PyBuildExt(build_ext):
         self.add(Extension('_csv', ['_csv.c']))
 
         # POSIX subprocess module helper.
-        self.add(Extension('_posixsubprocess', ['_posixsubprocess.c'],
-                           extra_compile_args=['-DPy_BUILD_CORE_MODULE']))
+        #self.add(Extension('_posixsubprocess', ['_posixsubprocess.c'],
+        #                   extra_compile_args=['-DPy_BUILD_CORE_MODULE']))
+        # Windows CE
+        self.add(Extension('winsound', ['PC/winsound.c']))
 
     def detect_test_extensions(self):
         # Python C API test module
@@ -1458,7 +1489,7 @@ class PyBuildExt(build_ext):
         dbm_setup_debug = False   # verbose debug prints from this script?
         dbm_order = ['gdbm']
         # The standard Unix dbm module:
-        if not CYGWIN:
+        if not CYGWIN and not WINCE:
             config_args = [arg.strip("'")
                            for arg in sysconfig.get_config_var("CONFIG_ARGS").split()]
             dbm_args = [arg for arg in config_args
@@ -1847,13 +1878,17 @@ class PyBuildExt(build_ext):
         if MS_WINDOWS:
             multiprocessing_srcs = ['_multiprocessing/multiprocessing.c',
                                     '_multiprocessing/semaphore.c']
+            self.add(Extension('_multiprocessing', multiprocessing_srcs,
+                               include_dirs=["Modules/_multiprocessing", "PC"],
+                               libraries=['coredll', 'ws2'],
+                               depends=['wince_compatibility.h']))
         else:
             multiprocessing_srcs = ['_multiprocessing/multiprocessing.c']
             if (sysconfig.get_config_var('HAVE_SEM_OPEN') and not
                 sysconfig.get_config_var('POSIX_SEMAPHORES_NOT_ENABLED')):
                 multiprocessing_srcs.append('_multiprocessing/semaphore.c')
-        self.add(Extension('_multiprocessing', multiprocessing_srcs,
-                           include_dirs=["Modules/_multiprocessing"]))
+            self.add(Extension('_multiprocessing', multiprocessing_srcs,
+                               include_dirs=["Modules/_multiprocessing"]))
 
         if (not MS_WINDOWS and
            sysconfig.get_config_var('HAVE_SHM_OPEN') and
@@ -1886,23 +1921,23 @@ class PyBuildExt(build_ext):
 
     def detect_modules(self):
         self.detect_simple_extensions()
-        if TEST_EXTENSIONS:
-            self.detect_test_extensions()
+        #if TEST_EXTENSIONS:
+        #    self.detect_test_extensions()
         self.detect_readline_curses()
-        self.detect_crypt()
-        self.detect_socket()
-        self.detect_openssl_hashlib()
+        #self.detect_crypt()
+        #self.detect_socket()
+        #self.detect_openssl_hashlib()
         self.detect_hash_builtins()
-        self.detect_dbm_gdbm()
+        #self.detect_dbm_gdbm()
         self.detect_sqlite()
         self.detect_platform_specific_exts()
         self.detect_nis()
         self.detect_compress_exts()
-        self.detect_expat_elementtree()
+        #self.detect_expat_elementtree()
         self.detect_multibytecodecs()
-        self.detect_decimal()
-        self.detect_ctypes()
-        self.detect_multiprocessing()
+        #self.detect_decimal()
+        #self.detect_ctypes()
+        #self.detect_multiprocessing()
         if not self.detect_tkinter():
             self.missing.append('_tkinter')
         self.detect_uuid()
@@ -1958,7 +1993,7 @@ class PyBuildExt(build_ext):
 
         extra_compile_args = tcltk_includes.split()
         extra_link_args = tcltk_libs.split()
-        self.add(Extension('_tkinter', ['_tkinter.c', 'tkappinit.c'],
+        self.add(Extension('_tkinter', ['_tkinter.c', 'tkappinit.c'] + ([] if not WINCE else ['../PC/WinCE/_tkinter/dynload_tcltk.c']),
                            define_macros=[('WITH_APPINIT', 1)],
                            extra_compile_args = extra_compile_args,
                            extra_link_args = extra_link_args))
@@ -2272,7 +2307,7 @@ class PyBuildExt(build_ext):
             # function my_sqrt() needs libm for sqrt()
             self.add(Extension('_ctypes_test',
                                sources=['_ctypes/_ctypes_test.c'],
-                               libraries=['m']))
+                               libraries=(['m'] if not HOST_PLATFORM.startswith('wince') else ['m', 'oleaut32'])))
 
         ffi_inc = sysconfig.get_config_var("LIBFFI_INCLUDEDIR")
         ffi_lib = None
@@ -2713,6 +2748,8 @@ def main():
     if "--list-module-names" in sys.argv:
         LIST_MODULE_NAMES = True
         sys.argv.remove("--list-module-names")
+
+    sysconfig.get_config_vars()['LDSHARED'] = sysconfig.get_config_var('LDSHARED') + ' libpython3.10.dll --enable-auto-import'
 
     set_compiler_flags('CFLAGS', 'PY_CFLAGS_NODIST')
     set_compiler_flags('LDFLAGS', 'PY_LDFLAGS_NODIST')

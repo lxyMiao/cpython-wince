@@ -324,7 +324,7 @@ class IOBinding:
             command = idleConf.GetOption('main','General',
                                          'print-command-posix')
             command = command + " 2>&1"
-        elif platform == 'nt': #win32 platform
+        elif platform in ('nt', 'ce'): #win32/wince platform
             command = idleConf.GetOption('main','General','print-command-win')
         else: #no printing for this platform
             printPlatform = False

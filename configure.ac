@@ -403,6 +403,10 @@ then
 	*-*-vxworks*)
 	    ac_sys_system=VxWorks
 	    ;;
+	*-*-mingw32ce)
+	    ac_sys_system=WinCE
+	    BASECPPFLAGS="-IPC $(BASECPPFLAGS)"
+	    ;;
 	*)
 		# for now, limit cross builds to known configurations
 		MACHDEP="unknown"
@@ -429,6 +433,7 @@ then
 	linux*) MACHDEP="linux";;
 	cygwin*) MACHDEP="cygwin";;
 	darwin*) MACHDEP="darwin";;
+	wince*) MACHDEP="wince";;
 	'')	MACHDEP="unknown";;
     esac
 fi
@@ -451,6 +456,15 @@ if test "$cross_compiling" = yes; then
 		;;
 	*-*-vxworks*)
 		_host_cpu=$host_cpu
+		;;
+	*-*-mingw32ce)
+		case "$host_cpu" in
+		arm*)
+			_host_cpu=arm
+			;;
+		*)
+			_host_cpu=$host_cpu
+		esac
 		;;
 	*)
 		# for now, limit cross builds to known configurations
@@ -531,7 +545,10 @@ case $ac_sys_system/$ac_sys_release in
   VxWorks/*)
     define_xopen_source=no
     ;;
-
+  # Windows CE
+  WinCE/*)
+    define_xopen_source=no
+    ;;
   # On HP-UX, defining _XOPEN_SOURCE to 600 or greater hides
   # chroot() and other functions
   hp*|HP*)
@@ -1010,6 +1027,7 @@ AC_MSG_RESULT($LIBRARY)
 #
 # LDVERSION is the shared library version number, normally the Python version
 # with the ABI build flags appended.
+
 AC_SUBST(LDLIBRARY)
 AC_SUBST(DLLLIBRARY)
 AC_SUBST(BLDLIBRARY)
@@ -1025,6 +1043,17 @@ DLLLIBRARY=''
 LDLIBRARYDIR=''
 RUNSHARED=''
 LDVERSION="$VERSION"
+
+# WINDRES is needed to check if PC/python_exe.rc is usable or not.
+AC_CHECK_TOOLS([WINDRES], [windres], [:])
+case $ac_sys_system in
+  WinCE*)
+    case "$WINDRES" in
+      windres|:)
+        WINDRES=""
+    esac
+esac
+AC_SUBST(WINDRES)
 
 # LINKCC is the command that links the python executable -- default is $(CC).
 # If CXX is set, and if it is needed to link a main function that was
@@ -1085,7 +1114,7 @@ AC_ARG_ENABLE(shared,
 if test -z "$enable_shared"
 then
   case $ac_sys_system in
-  CYGWIN*)
+  CYGWIN|WinCE*)
     enable_shared="yes";;
   *)
     enable_shared="no";;
@@ -1139,6 +1168,13 @@ if test $enable_shared = "yes"; then
           LDLIBRARY='libpython$(LDVERSION).dll.a'
           DLLLIBRARY='libpython$(LDVERSION).dll'
           ;;
+    WinCE*)
+	     LDLIBRARY='libpython$(LDVERSION).dll.a'
+	     DLLLIBRARY='libpython$(LDVERSION).dll'
+	     if test ! $WINDRES = ""; then
+	         BLDLIBRARY='$(LDLIBRARY) PC/python_exe.o'
+	     fi
+	     ;;
     SunOS*)
 	  LDLIBRARY='libpython$(LDVERSION).so'
 	  BLDLIBRARY='-Wl,-R,$(LIBDIR) -L. -lpython$(LDVERSION)'
@@ -1180,7 +1216,6 @@ if test $enable_shared = "yes"; then
 	LDLIBRARY='libpython$(LDVERSION).so'
 	RUNSHARED=LIBPATH=`pwd`${LIBPATH:+:${LIBPATH}}
 	;;
-
   esac
 else # shared is disabled
   PY_ENABLE_SHARED=0
@@ -1189,6 +1224,14 @@ else # shared is disabled
           BLDLIBRARY='$(LIBRARY)'
           LDLIBRARY='libpython$(LDVERSION).dll.a'
           ;;
+    WinCE*)
+          if test $WINDRES = ""; then
+            BLDLIBRARY='$(LIBRARY)'
+          else
+            BLDLIBRARY='$(LDLIBRARY) PC/python_exe.o'
+          fi
+          LDLIBRARY='libpython$(LDVERSION).dll.a'
+          ;; 
   esac
 fi
 
@@ -1218,7 +1261,6 @@ if test "$cross_compiling" = yes; then
 fi
 AC_SUBST(READELF)
 
-
 case $MACHDEP in
 hp*|HP*)
 	# install -d does not work on HP-UX
@@ -1234,7 +1276,7 @@ AC_PROG_MKDIR_P
 AC_SUBST(LN)
 if test -z "$LN" ; then
 	case $ac_sys_system in
-		CYGWIN*) LN="ln -s";;
+		CYGWIN*|WinCE*) LN="ln -s";;
 		*) LN=ln;;
 	esac
 fi
@@ -1504,6 +1546,12 @@ case $CC in
 	  fi
         fi
         ;;
+      WinCE*)
+        PGO_PROF_GEN_FLAG=""
+	PGO_PROF_USE_FLAG=""
+	LLVM_PROF_MERGER="true"
+	LLVM_PROF_FILE=""
+	;;
       *)
         PGO_PROF_GEN_FLAG="-fprofile-generate"
         PGO_PROF_USE_FLAG="-fprofile-use -fprofile-correction"
@@ -2631,7 +2679,7 @@ if test -z "$SHLIB_SUFFIX"; then
 	  		*)    SHLIB_SUFFIX=.sl;;
 		esac
 		;;
-	CYGWIN*)   SHLIB_SUFFIX=.dll;;
+	CYGWIN*|WinCE*)   SHLIB_SUFFIX=.dll;;
 	*)	   SHLIB_SUFFIX=.so;;
 	esac
 fi
@@ -2756,6 +2804,9 @@ then
 	CYGWIN*)
 		LDSHARED="gcc -shared -Wl,--enable-auto-image-base"
 		LDCXXSHARED="g++ -shared -Wl,--enable-auto-image-base";;
+	WinCE*)
+		LDSHARED='$(CC) -shared -Wl,--enable-auto-image-base'
+		LDCXXSHARED='$(CXX) -shared -Wl,--enable-auto-image-base';;
 	*)	LDSHARED="ld";;
 	esac
 fi
@@ -2793,6 +2844,8 @@ then
 		fi;;
 	VxWorks*)
 		CCSHARED="-fpic -D__SO_PICABILINUX__  -ftls-model=global-dynamic"
+		;;
+	WinCE*) CCSHARED="";;
 	esac
 fi
 AC_MSG_RESULT($CCSHARED)
@@ -2848,7 +2901,7 @@ then
 			LINKFORSHARED="-Xlinker --export-dynamic"
 		    fi;;
 		  esac;;
-	CYGWIN*)
+	CYGWIN*|WinCE*)
 		if test $enable_shared = "no"
 		then
 			LINKFORSHARED='-Wl,--out-implib=$(LDLIBRARY)'
@@ -3673,6 +3726,7 @@ if test -z "$DYNLOADFILE"
 then
 	case $ac_sys_system/$ac_sys_release in
 	hp*|HP*) DYNLOADFILE="dynload_hpux.o";;
+	WinCE*) DYNLOADFILE="dynload_win.o";;
 	*)
 	# use dynload_shlib.c and dlopen() if we have it; otherwise stub
 	# out any dynamic loading
@@ -5991,6 +6045,10 @@ if test "$PY_ENABLE_SHARED" = 1 || test "$enable_framework" ; then
 else
     LIBRARY_DEPS="\$(LIBRARY) $LIBRARY_DEPS"
 fi
+case $ac_sys_system in
+    WinCE*)
+        LIBRARY_DEPS="$LIBRARY_DEPS PC/python_exe.o" # resource file for python for WinCE
+esac
 AC_SUBST(STATIC_LIBPYTHON)
 AC_SUBST(LIBRARY_DEPS)
 

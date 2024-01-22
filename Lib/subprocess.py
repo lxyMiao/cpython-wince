@@ -1365,6 +1365,10 @@ class Popen:
 
             assert not pass_fds, "pass_fds not supported on Windows."
 
+            if os.name == 'ce' and executable is None and isinstance(args, (list, tuple)):
+                executable = args[0]
+                args = [*args[1:]]
+
             if isinstance(args, str):
                 pass
             elif isinstance(args, bytes):

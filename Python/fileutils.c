@@ -896,7 +896,11 @@ _Py_GetLocaleEncoding(void)
 #ifdef MS_WINDOWS
     wchar_t encoding[23];
     unsigned int ansi_codepage = GetACP();
+#ifndef MS_WINCE
     swprintf(encoding, Py_ARRAY_LENGTH(encoding), L"cp%u", ansi_codepage);
+#else // swprintf in WinCE does not take count arg since it is the old one.
+    swprintf(encoding, L"cp%u", ansi_codepage);
+#endif
     encoding[Py_ARRAY_LENGTH(encoding) - 1] = 0;
     return _PyMem_RawWcsdup(encoding);
 #else
@@ -1347,8 +1351,13 @@ set_inheritable(int fd, int inheritable, int raise, int *atomic_flag_works)
         flags = 0;
 
     /* This check can be removed once support for Windows 7 ends. */
+#ifndef MS_WINCE
 #define CONSOLE_PSEUDOHANDLE(handle) (((ULONG_PTR)(handle) & 0x3) == 0x3 && \
         GetFileType(handle) == FILE_TYPE_CHAR)
+#else /* FIXME-WINCE: GetFileType is set to always return FILE_TYPE_DISK (see PC/wince_compatibility.h) */
+#define CONSOLE_PSEUDOHANDLE(handle) (((ULONG_PTR)(handle) & 0x3) == 0x3)
+#endif
+
 
     if (!CONSOLE_PSEUDOHANDLE(handle) &&
         !SetHandleInformation(handle, HANDLE_FLAG_INHERIT, flags)) {
@@ -2280,7 +2289,7 @@ _Py_GetLocaleconvNumeric(struct lconv *lc,
     assert(decimal_point != NULL);
     assert(thousands_sep != NULL);
 
-#ifndef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     int change_locale = 0;
     if ((strlen(lc->decimal_point) > 1 || ((unsigned char)lc->decimal_point[0]) > 127)) {
         change_locale = 1;
@@ -2319,6 +2328,8 @@ _Py_GetLocaleconvNumeric(struct lconv *lc,
         }
     }
 
+#endif
+#if !defined(MS_WINDOWS) || defined(MS_WINCE)
 #define GET_LOCALE_STRING(ATTR) PyUnicode_DecodeLocale(lc->ATTR, NULL)
 #else /* MS_WINDOWS */
 /* Use _W_* fields of Windows strcut lconv */

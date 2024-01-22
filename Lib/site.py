@@ -273,7 +273,7 @@ def _getuserbase():
     def joinuser(*args):
         return os.path.expanduser(os.path.join(*args))
 
-    if os.name == "nt":
+    if os.name in ("nt", "ce"):
         base = os.environ.get("APPDATA") or "~"
         return joinuser(base, "Python")
 
@@ -288,7 +288,7 @@ def _getuserbase():
 def _get_path(userbase):
     version = sys.version_info
 
-    if os.name == 'nt':
+    if os.name in ('nt', 'ce'):
         ver_nodot = sys.winver.replace('.', '')
         return f'{userbase}\\Python{ver_nodot}\\site-packages'
 

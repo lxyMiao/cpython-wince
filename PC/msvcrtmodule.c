@@ -19,9 +19,13 @@
 #include "Python.h"
 #include "malloc.h"
 #include <io.h>
+#ifndef MS_WINCE
 #include <conio.h>
+#endif
 #include <sys/locking.h>
+#ifndef MS_WINCE
 #include <crtdbg.h>
+#endif
 #include <windows.h>
 
 #ifdef _MSC_VER
@@ -217,7 +221,11 @@ static long
 msvcrt_kbhit_impl(PyObject *module)
 /*[clinic end generated code: output=940dfce6587c1890 input=e70d678a5c2f6acc]*/
 {
+#ifndef MS_WINCE
     return _kbhit();
+#else
+    return WinCEShell_kbhit();
+#endif
 }
 
 /*[clinic input]
@@ -239,7 +247,11 @@ msvcrt_getch_impl(PyObject *module)
     int ch;
 
     Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
     ch = _getch();
+#else
+    ch = WinCEShell_getch();
+#endif
     Py_END_ALLOW_THREADS
     return ch;
 }
@@ -257,7 +269,11 @@ msvcrt_getwch_impl(PyObject *module)
     wchar_t ch;
 
     Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
     ch = _getwch();
+#else
+    ch = WinCEShell_getwch();
+#endif
     Py_END_ALLOW_THREADS
     return ch;
 }
@@ -275,7 +291,11 @@ msvcrt_getche_impl(PyObject *module)
     int ch;
 
     Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
     ch = _getche();
+#else
+    ch = WinCEShell_getche();
+#endif
     Py_END_ALLOW_THREADS
     return ch;
 }
@@ -293,7 +313,11 @@ msvcrt_getwche_impl(PyObject *module)
     wchar_t ch;
 
     Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
     ch = _getwche();
+#else
+    ch = WinCEShell_getwche();
+#endif
     Py_END_ALLOW_THREADS
     return ch;
 }
@@ -312,7 +336,11 @@ msvcrt_putch_impl(PyObject *module, char char_value)
 /*[clinic end generated code: output=92ec9b81012d8f60 input=ec078dd10cb054d6]*/
 {
     _Py_BEGIN_SUPPRESS_IPH
+#ifndef MS_WINCE
     _putch(char_value);
+#else
+    WinCEShell_putch(char_value);
+#endif
     _Py_END_SUPPRESS_IPH
     Py_RETURN_NONE;
 }
@@ -331,7 +359,11 @@ msvcrt_putwch_impl(PyObject *module, int unicode_char)
 /*[clinic end generated code: output=a3bd1a8951d28eee input=996ccd0bbcbac4c3]*/
 {
     _Py_BEGIN_SUPPRESS_IPH
+#ifndef MS_WINCE
     _putwch(unicode_char);
+#else
+    WinCEShell_putwch(unicode_char);
+#endif
     _Py_END_SUPPRESS_IPH
     Py_RETURN_NONE;
 
@@ -357,7 +389,11 @@ msvcrt_ungetch_impl(PyObject *module, char char_value)
     int res;
 
     _Py_BEGIN_SUPPRESS_IPH
+#ifndef MS_WINCE
     res = _ungetch(char_value);
+#else
+    res = WinCEShell_ungetch(char_value);
+#endif
     _Py_END_SUPPRESS_IPH
 
     if (res == EOF)
@@ -381,7 +417,11 @@ msvcrt_ungetwch_impl(PyObject *module, int unicode_char)
     int res;
 
     _Py_BEGIN_SUPPRESS_IPH
+#ifndef MS_WINCE
     res = _ungetwch(unicode_char);
+#else
+    res = WinCEShell_ungetwch(unicode_char);
+#endif
     _Py_END_SUPPRESS_IPH
 
     if (res == WEOF)

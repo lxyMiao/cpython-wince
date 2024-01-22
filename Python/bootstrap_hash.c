@@ -47,11 +47,15 @@ static HCRYPTPROV hCryptProv = 0;
 static int
 win32_urandom_init(int raise)
 {
+#ifndef LACK_OF_CRYPT_API
     /* Acquire context */
     if (!CryptAcquireContextW(&hCryptProv, NULL, NULL,
                               PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
         goto error;
 
+#else
+    hCryptProv = 1;
+#endif
     return 0;
 
 error:
@@ -75,6 +79,7 @@ win32_urandom(unsigned char *buffer, Py_ssize_t size, int raise)
 
     while (size > 0)
     {
+#ifndef LACK_OF_CRYPT_API
         DWORD chunk = (DWORD)Py_MIN(size, PY_DWORD_MAX);
         if (!CryptGenRandom(hCryptProv, chunk, buffer))
         {
@@ -84,6 +89,12 @@ win32_urandom(unsigned char *buffer, Py_ssize_t size, int raise)
             }
             return -1;
         }
+#else
+        DWORD chunk = (DWORD)sizeof(int);
+        srand(GetTickCount());
+        int random = rand();
+        memcpy(buffer, &random, (size_t)chunk);
+#endif
         buffer += chunk;
         size -= chunk;
     }
@@ -614,7 +625,9 @@ _Py_HashRandomization_Fini(void)
 {
 #ifdef MS_WINDOWS
     if (hCryptProv) {
+#ifndef MS_WINCE
         CryptReleaseContext(hCryptProv, 0);
+#endif
         hCryptProv = 0;
     }
 #else

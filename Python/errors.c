@@ -18,6 +18,7 @@ extern char *strerror(int);
 #ifdef MS_WINDOWS
 #include <windows.h>
 #include <winbase.h>
+#undef finally /* Needed for Windows CE */
 #endif
 
 #include <ctype.h>

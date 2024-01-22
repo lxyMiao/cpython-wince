@@ -109,6 +109,12 @@ del klass
 try:
     from _io import _WindowsConsoleIO
 except ImportError:
-    pass
+    try:
+        from _io import _WinCEConsoleIO
+    except ImportError:
+        pass
+    else:
+        RawIOBase.register(_WinCEConsoleIO)
 else:
     RawIOBase.register(_WindowsConsoleIO)
+

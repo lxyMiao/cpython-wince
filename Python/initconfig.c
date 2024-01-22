@@ -503,7 +503,7 @@ Py_SetStandardStreamEncoding(const char *encoding, const char *errors)
             goto done;
         }
     }
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     if (_Py_StandardStreamEncoding) {
         /* Overriding the stream encoding implies legacy streams */
         Py_LegacyWindowsStdioFlag = 1;
@@ -2213,7 +2213,7 @@ config_init_stdio(const PyConfig *config)
 {
 #if defined(MS_WINDOWS) || defined(__CYGWIN__)
     /* don't translate newlines (\r\n <=> \n) */
-    _setmode(fileno(stdin), O_BINARY);
+    _setmode((int)_fileno(stdin), O_BINARY);
     _setmode(fileno(stdout), O_BINARY);
     _setmode(fileno(stderr), O_BINARY);
 #endif
@@ -2504,9 +2504,15 @@ config_init_env_warnoptions(PyConfig *config, PyWideStringList *warnoptions)
 
 
     wchar_t *warning, *context = NULL;
+#ifndef MS_WINCE /* FIXME-WINCE: mingw32ce CEGCC has a problem: wcstok is defined with TWO args! */
     for (warning = WCSTOK(env, L",", &context);
          warning != NULL;
          warning = WCSTOK(NULL, L",", &context))
+#else
+    for (warning = WCSTOK(env, L",");
+         warning != NULL;
+         warning = WCSTOK(NULL, L","))
+#endif
     {
         status = PyWideStringList_Append(warnoptions, warning);
         if (_PyStatus_EXCEPTION(status)) {
@@ -3109,6 +3115,28 @@ _Py_DumpPathConfig(PyThreadState *tstate)
         }
         PySys_WriteStderr("  ]\n");
     }
+    PyObject *sys_meta_path = PySys_GetObject("meta_path");  /* borrowed reference */
+    if (sys_meta_path != NULL && PyList_Check(sys_meta_path)) {
+        PySys_WriteStderr("  sys.meta_path = [\n");
+        Py_ssize_t len = PyList_GET_SIZE(sys_meta_path);
+        for (Py_ssize_t i=0; i < len; i++) {
+            PyObject *meta_path = PyList_GET_ITEM(sys_meta_path, i);
+            PySys_FormatStderr("    %A,\n", meta_path);
+        }
+        PySys_WriteStderr("  ]\n");
+    }
+    PyObject *sys_path_hooks = PySys_GetObject("path_hooks");  /* borrowed reference */
+    if (sys_path_hooks != NULL && PyList_Check(sys_path_hooks)) {
+        PySys_WriteStderr("  sys.path_hooks = [\n");
+        Py_ssize_t len = PyList_GET_SIZE(sys_path_hooks);
+        for (Py_ssize_t i=0; i < len; i++) {
+            PyObject *path_hooks = PyList_GET_ITEM(sys_path_hooks, i);
+            PySys_FormatStderr("    %A,\n", path_hooks);
+        }
+        PySys_WriteStderr("  ]\n");
+    }
+
+
 
     _PyErr_Restore(tstate, exc_type, exc_value, exc_tb);
 }

@@ -52,7 +52,7 @@ from sysconfig import (
 # which might not be true in the time of import.
 _config_vars = get_config_vars()
 
-if os.name == "nt":
+if os.name in ("nt", "ce"):
     from sysconfig import _fix_pcbuild
 
 warnings.warn(
@@ -293,7 +293,7 @@ def get_python_inc(plat_specific=0, prefix=None):
                 return os.path.normpath(incdir)
         python_dir = 'python' + get_python_version() + build_flags
         return os.path.join(prefix, "include", python_dir)
-    elif os.name == "nt":
+    elif os.name in ("nt", "ce"):
         if python_build:
             # Include both the include and PC dir to ensure we can find
             # pyconfig.h
@@ -340,7 +340,7 @@ def get_python_lib(plat_specific=0, standard_lib=0, prefix=None):
             return libpython
         else:
             return os.path.join(libpython, "site-packages")
-    elif os.name == "nt":
+    elif os.name in ("nt", "ce"):
         if standard_lib:
             return os.path.join(prefix, "Lib")
         else:

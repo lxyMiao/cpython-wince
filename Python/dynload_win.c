@@ -12,6 +12,11 @@
 #include "patchlevel.h"
 #include <windows.h>
 
+#ifdef MS_WINCE
+#undef GetProcAddress
+#define GetProcAddress GetProcAddressA
+#endif
+
 #ifdef _DEBUG
 #define PYD_DEBUG_SUFFIX "_d"
 #else
@@ -59,6 +64,12 @@ static char *GetPythonImport (HINSTANCE hModule)
     DWORD pe_offset, opt_offset;
     WORD opt_magic;
     int num_dict_off, import_off;
+
+#ifdef MS_WINCE
+    /* On Windows CE the return value of LoadLibrary() is NOT the
+    base address of the module */
+    return NULL;
+#endif
 
     /* Safety check input */
     if (hModule == NULL) {
@@ -191,9 +202,13 @@ dl_funcptr _PyImport_FindSharedFuncptrWindows(const char *prefix,
            AddDllDirectory function. We add SEARCH_DLL_LOAD_DIR to
            ensure DLLs adjacent to the PYD are preferred. */
         Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
         hDLL = LoadLibraryExW(wpathname, NULL,
                               LOAD_LIBRARY_SEARCH_DEFAULT_DIRS |
                               LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR);
+#else
+        hDLL = LoadLibraryExW(wpathname, NULL, NULL);
+#endif
         Py_END_ALLOW_THREADS
 #if !USE_UNICODE_WCHAR_CACHE
         PyMem_Free(wpathname);

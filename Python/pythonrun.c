@@ -33,6 +33,7 @@
 #ifdef MS_WINDOWS
 #  undef BYTE
 #  include "windows.h"
+#  undef finally /* Needed for Windows CE */
 #endif
 
 

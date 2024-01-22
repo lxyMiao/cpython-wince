@@ -118,7 +118,7 @@ class _WindowsFlavour(_Flavour):
     has_drv = True
     pathmod = ntpath
 
-    is_supported = (os.name == 'nt')
+    is_supported = (os.name in ('nt', 'ce'))
 
     drive_letters = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
     ext_namespace_prefix = '\\\\?\\'
@@ -234,7 +234,7 @@ class _PosixFlavour(_Flavour):
     has_drv = False
     pathmod = posixpath
 
-    is_supported = (os.name != 'nt')
+    is_supported = (os.name not in ('nt', 'ce'))
 
     def splitroot(self, part, sep=sep):
         if part and part[0] == sep:
@@ -558,7 +558,7 @@ class PurePath(object):
         new PurePath object.
         """
         if cls is PurePath:
-            cls = PureWindowsPath if os.name == 'nt' else PurePosixPath
+            cls = PureWindowsPath if os.name in ('nt', 'ce') else PurePosixPath
         return cls._from_parts(args)
 
     def __reduce__(self):
@@ -956,7 +956,7 @@ class Path(PurePath):
 
     def __new__(cls, *args, **kwargs):
         if cls is Path:
-            cls = WindowsPath if os.name == 'nt' else PosixPath
+            cls = WindowsPath if os.name in ('nt', 'ce') else PosixPath
         self = cls._from_parts(args)
         if not self._flavour.is_supported:
             raise NotImplementedError("cannot instantiate %r on your system"

@@ -3,7 +3,9 @@
  */
 
 #include <stdlib.h>
+#ifndef MS_WINCE
 #include <errno.h>
+#endif
 
 #include "pycore_atomic.h"
 

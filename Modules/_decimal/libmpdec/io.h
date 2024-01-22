@@ -38,7 +38,9 @@
 #if SIZE_MAX == MPD_SIZE_MAX
   #define mpd_strtossize _mpd_strtossize
 #else
+#ifndef MS_WINCE
 #include <errno.h>
+#endif
 
 static inline mpd_ssize_t
 mpd_strtossize(const char *s, char **end, int base)

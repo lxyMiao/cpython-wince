@@ -916,7 +916,7 @@ int main (int argc, char **argv) {
         mkpath(name, mode, dry_run=self.dry_run)
 
 
-# Map a sys.platform/os.name ('posix', 'nt') to the default compiler
+# Map a sys.platform/os.name ('posix', 'nt', 'ce') to the default compiler
 # type for that platform. Keys are interpreted as re match
 # patterns. Order is important; platform mappings are preferred over
 # OS names.

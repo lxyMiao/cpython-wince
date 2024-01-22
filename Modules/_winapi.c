@@ -41,8 +41,12 @@
 
 #define WINDOWS_LEAN_AND_MEAN
 #include "windows.h"
+#ifndef MS_WINCE
 #include <crtdbg.h>
+#endif
 #include "winreparse.h"
+
+#include <winioctl.h>
 
 #if defined(MS_WIN32) && !defined(MS_WIN64)
 #define HANDLE_TO_PYNUM(handle) \
@@ -70,6 +74,7 @@ static BOOL (CALLBACK *Py_CancelIoEx)(HANDLE, LPOVERLAPPED);
 static int
 check_CancelIoEx()
 {
+#ifndef MS_WINCE
     if (has_CancelIoEx == -1)
     {
         HINSTANCE hKernel32 = GetModuleHandle("KERNEL32");
@@ -77,6 +82,7 @@ check_CancelIoEx()
                                                       "CancelIoEx");
         has_CancelIoEx = (Py_CancelIoEx != NULL);
     }
+#endif
     return has_CancelIoEx;
 }
 
@@ -1079,10 +1085,12 @@ _winapi_CreateProcess_impl(PyObject *module,
     PyObject *ret = NULL;
     BOOL result;
     PROCESS_INFORMATION pi;
+#ifndef MS_WINCE
     STARTUPINFOEXW si;
+    AttributeList attribute_list = {0};
+#endif
     wchar_t *wenvironment = NULL;
     wchar_t *command_line_copy = NULL;
-    AttributeList attribute_list = {0};
 
     if (PySys_Audit("_winapi.CreateProcess", "uuu", application_name,
                     command_line, current_directory) < 0) {
@@ -1097,6 +1105,7 @@ _winapi_CreateProcess_impl(PyObject *module,
         return NULL;
     }
 
+#ifndef MS_WINCE
     ZeroMemory(&si, sizeof(si));
     si.StartupInfo.cb = sizeof(si);
 
@@ -1108,6 +1117,7 @@ _winapi_CreateProcess_impl(PyObject *module,
     si.StartupInfo.hStdError = gethandle(startup_info, "hStdError");
     if (PyErr_Occurred())
         goto cleanup;
+#endif
 
     if (env_mapping != Py_None) {
         wenvironment = getenvironment(env_mapping);
@@ -1116,10 +1126,12 @@ _winapi_CreateProcess_impl(PyObject *module,
         }
     }
 
+#ifndef MS_WINCE
     if (getattributelist(startup_info, "lpAttributeList", &attribute_list) < 0)
         goto cleanup;
 
     si.lpAttributeList = attribute_list.attribute_list;
+#endif
     if (PyUnicode_Check(command_line)) {
         command_line_copy = PyUnicode_AsWideCharString(command_line, NULL);
         if (command_line_copy == NULL) {
@@ -1133,18 +1145,37 @@ _winapi_CreateProcess_impl(PyObject *module,
         goto cleanup;
     }
 
+#ifdef MS_WINCE
+    if (inherit_handles)
+        PyErr_Warn(NULL, "CreateProcess on WinCE does not support inherit_handles, ignored.");
+    if (wenvironment != NULL)
+        PyErr_Warn(NULL, "CreateProcess on WinCE does not support environ, ignored.");
+    if (current_directory != NULL)
+        PyErr_Warn(NULL, "CreateProcess on WinCE does not support current_directory, ignored.");
+    if (creation_flags & !(CREATE_NEW_CONSOLE | CREATE_SUSPENDED | DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS))
+        PyErr_Warn(NULL, "CreateProcess on WinCE does not support some given flags.");
+#endif
+
 
     Py_BEGIN_ALLOW_THREADS
     result = CreateProcessW(application_name,
                            command_line_copy,
                            NULL,
                            NULL,
+#ifndef MS_WINCE
                            inherit_handles,
                            creation_flags | EXTENDED_STARTUPINFO_PRESENT |
                            CREATE_UNICODE_ENVIRONMENT,
                            wenvironment,
                            current_directory,
                            (LPSTARTUPINFOW)&si,
+#else
+                           NULL,
+                           creation_flags,
+                           NULL,
+                           NULL,
+                           NULL,
+#endif
                            &pi);
     Py_END_ALLOW_THREADS
 
@@ -1162,7 +1193,9 @@ _winapi_CreateProcess_impl(PyObject *module,
 cleanup:
     PyMem_Free(command_line_copy);
     PyMem_Free(wenvironment);
+#ifndef MS_WINCE
     freeattributelist(&attribute_list);
+#endif
 
     return ret;
 }
@@ -1550,8 +1583,14 @@ _winapi_LCMapStringEx_impl(PyObject *module, PyObject *locale, DWORD flags,
                            PyObject *src)
 /*[clinic end generated code: output=8ea4c9d85a4a1f23 input=2fa6ebc92591731b]*/
 {
-    if (flags & (LCMAP_SORTHANDLE | LCMAP_HASH | LCMAP_BYTEREV |
-                 LCMAP_SORTKEY)) {
+#if defined(LCMAP_SORTHANDLE) && defined(LCMAP_HASH)
+        if (flags & (LCMAP_SORTHANDLE | LCMAP_HASH | LCMAP_BYTEREV |
+                 LCMAP_SORTKEY))
+#else
+        if (flags & (LCMAP_BYTEREV |
+                 LCMAP_SORTKEY))
+#endif
+    {
         return PyErr_Format(PyExc_ValueError, "unsupported flags");
     }
 
@@ -2254,10 +2293,12 @@ static int winapi_exec(PyObject *m)
     WINAPI_CONSTANT(F_DWORD, FILE_TYPE_PIPE);
     WINAPI_CONSTANT(F_DWORD, FILE_TYPE_REMOTE);
 
+#ifndef MS_WINCE
     WINAPI_CONSTANT("u", LOCALE_NAME_INVARIANT);
     WINAPI_CONSTANT(F_DWORD, LOCALE_NAME_MAX_LENGTH);
     WINAPI_CONSTANT("u", LOCALE_NAME_SYSTEM_DEFAULT);
     WINAPI_CONSTANT("u", LOCALE_NAME_USER_DEFAULT);
+#endif
 
     WINAPI_CONSTANT(F_DWORD, LCMAP_FULLWIDTH);
     WINAPI_CONSTANT(F_DWORD, LCMAP_HALFWIDTH);
@@ -2266,7 +2307,9 @@ static int winapi_exec(PyObject *m)
     WINAPI_CONSTANT(F_DWORD, LCMAP_LINGUISTIC_CASING);
     WINAPI_CONSTANT(F_DWORD, LCMAP_LOWERCASE);
     WINAPI_CONSTANT(F_DWORD, LCMAP_SIMPLIFIED_CHINESE);
+#ifdef LCMAP_TITLECASE /* WinCE does not have this. */
     WINAPI_CONSTANT(F_DWORD, LCMAP_TITLECASE);
+#endif
     WINAPI_CONSTANT(F_DWORD, LCMAP_TRADITIONAL_CHINESE);
     WINAPI_CONSTANT(F_DWORD, LCMAP_UPPERCASE);
 

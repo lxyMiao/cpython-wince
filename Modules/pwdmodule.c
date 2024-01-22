@@ -1,6 +1,8 @@
 
 /* UNIX password file access module */
 
+#ifndef _WIN32_WCE
+
 #include "Python.h"
 #include "posixmodule.h"
 
@@ -371,3 +373,5 @@ PyInit_pwd(void)
 {
     return PyModuleDef_Init(&pwdmodule);
 }
+
+#endif /* !_WIN32_WCE */

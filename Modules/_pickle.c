@@ -8,6 +8,16 @@
 #  error "Py_BUILD_CORE_BUILTIN or Py_BUILD_CORE_MODULE must be defined"
 #endif
 
+#ifdef MS_WINCE
+#ifndef _PICKLE_COMPILING
+#define _PICKLE_COMPILING
+/* FIXME-WINCE: PC/wince_compatibility.h includes windows.h, which defines some symbols
+ * like FLOAT and cegcc throw errors. 
+ * This flag let Python.h not to include wince_compatibility.h so the errors do not occur.
+ */
+#endif
+#endif
+
 #include "Python.h"
 #include "pycore_moduleobject.h"  // _PyModule_GetState()
 #include "structmember.h"         // PyMemberDef
@@ -40,11 +50,20 @@ enum opcode {
     POP             = '0',
     POP_MARK        = '1',
     DUP             = '2',
+#ifndef MS_WINCE
     FLOAT           = 'F',
     INT             = 'I',
+#else
+    _FLOAT          = 'F',
+    _INT             = 'I',
+#endif
     BININT          = 'J',
     BININT1         = 'K',
+#ifndef MS_WINCE
     LONG            = 'L',
+#else
+    _LONG           = 'L',
+#endif
     BININT2         = 'M',
     NONE            = 'N',
     PERSID          = 'P',
@@ -53,7 +72,11 @@ enum opcode {
     STRING          = 'S',
     BINSTRING       = 'T',
     SHORT_BINSTRING = 'U',
+#ifndef MS_WINCE
     UNICODE         = 'V',
+#else
+    ___UNICODE       = 'V',
+#endif
     BINUNICODE      = 'X',
     APPEND          = 'a',
     BUILD           = 'b',
@@ -2116,7 +2139,11 @@ save_long(PicklerObject *self, PyObject *obj)
             }
         }
         else {
+#ifndef MS_WINCE
             sprintf(pdata, "%c%ld\n", INT,  val);
+#else
+            sprintf(pdata, "%c%ld\n", _INT,  val);
+#endif
             len = strlen(pdata);
         }
         if (_Pickler_Write(self, pdata, len) < 0)
@@ -2204,7 +2231,11 @@ save_long(PicklerObject *self, PyObject *obj)
             goto error;
     }
     else {
+#ifndef MS_WINCE
         const char long_op = LONG;
+#else
+        const char long_op = _LONG;
+#endif
         const char *string;
 
         /* proto < 2: write the repr and newline.  This is quadratic-time (in
@@ -2250,7 +2281,11 @@ save_float(PicklerObject *self, PyObject *obj)
     else {
         int result = -1;
         char *buf = NULL;
+#ifndef MS_WINCE
         char op = FLOAT;
+#else
+        char op = _FLOAT;
+#endif
 
         if (_Pickler_Write(self, &op, 1) < 0)
             goto done;
@@ -2714,7 +2749,11 @@ save_unicode(PicklerObject *self, PyObject *obj)
     else {
         PyObject *encoded;
         Py_ssize_t size;
+#ifndef MS_WINCE
         const char unicode_op = UNICODE;
+#else
+        const char unicode_op = ___UNICODE;
+#endif
 
         encoded = raw_unicode_escape(obj);
         if (encoded == NULL)
@@ -6905,11 +6944,20 @@ load(UnpicklerObject *self)
         OP(BININT, load_binint)
         OP(BININT1, load_binint1)
         OP(BININT2, load_binint2)
+#ifndef MS_WINCE
         OP(INT, load_int)
         OP(LONG, load_long)
+#else
+        OP(_INT, load_int)
+        OP(_LONG, load_long)
+#endif
         OP_ARG(LONG1, load_counted_long, 1)
         OP_ARG(LONG4, load_counted_long, 4)
+#ifndef MS_WINCE
         OP(FLOAT, load_float)
+#else
+        OP(_FLOAT, load_float)
+#endif
         OP(BINFLOAT, load_binfloat)
         OP_ARG(SHORT_BINBYTES, load_counted_binbytes, 1)
         OP_ARG(BINBYTES, load_counted_binbytes, 4)
@@ -6920,7 +6968,11 @@ load(UnpicklerObject *self)
         OP_ARG(SHORT_BINSTRING, load_counted_binstring, 1)
         OP_ARG(BINSTRING, load_counted_binstring, 4)
         OP(STRING, load_string)
+#ifndef MS_WINCE
         OP(UNICODE, load_unicode)
+#else
+        OP(___UNICODE, load_unicode)
+#endif
         OP_ARG(SHORT_BINUNICODE, load_counted_binunicode, 1)
         OP_ARG(BINUNICODE, load_counted_binunicode, 4)
         OP_ARG(BINUNICODE8, load_counted_binunicode, 8)

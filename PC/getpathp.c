@@ -90,7 +90,9 @@
 #endif
 
 #include <windows.h>
+#ifndef MS_WINCE
 #include <pathcch.h>
+#endif
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -207,7 +209,12 @@ change_ext(wchar_t *dest, const wchar_t *src, const wchar_t *ext)
 static int
 exists(const wchar_t *filename)
 {
-    return GetFileAttributesW(filename) != 0xFFFFFFFF;
+    //return GetFileAttributesW(filename) != 0xFFFFFFFF;
+    if (GetFileAttributesW(filename) != 0xFFFFFFFF) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
 
 
@@ -624,7 +631,11 @@ read_pth_file(_PyPathConfig *pathconfig, wchar_t *prefix, const wchar_t *path,
             usedsiz += 1;
         }
 
+#ifdef errno_t
         errno_t result;
+#else
+        int result;
+#endif
         _Py_BEGIN_SUPPRESS_IPH
         result = wcscat_s(buf, bufsiz, prefix);
         _Py_END_SUPPRESS_IPH

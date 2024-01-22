@@ -1,7 +1,7 @@
 /* POSIX module implementation */
 
 /* This file is also used for Windows NT/MS-Win.  In that case the
-   module actually calls itself 'nt', not 'posix', and a few
+   module actually calls itself 'nt' or 'ce', not 'posix', and a few
    functions are either unimplemented or implemented differently.  The source
    assumes that for Windows NT, the macro 'MS_WINDOWS' is defined independent
    of the compiler used.  Different compilers define their own feature
@@ -20,10 +20,19 @@
 
       FSCTL_GET_REPARSE_POINT is not exported with WIN32_LEAN_AND_MEAN. */
 #  include <windows.h>
+#  ifndef MS_WINCE
 #  include <pathcch.h>
+#  endif /* NOT MS_WINCE */
 #  include <lmcons.h>             // UNLEN
 #  include "osdefs.h"             // SEP
 #  define HAVE_SYMLINK
+#endif
+
+#ifdef MS_WINCE
+#include <winbase.h>
+#include <winioctl.h>
+#define FileAttributeTagInfo 9
+#define ALL_PROCESSOR_GROUPS 0xffff
 #endif
 
 #ifdef __VXWORKS__
@@ -47,6 +56,10 @@
 #endif
 
 #include <stdio.h>  /* needed for ctermid() */
+
+#ifndef DIR
+#include <dirent.h>
+#endif
 
 /*
  * A number of APIs are available on macOS from a certain macOS version.
@@ -291,7 +304,7 @@ corresponding Unix manual entries for more information on calls.");
 #  include <sys/syscall.h>
 #endif
 
-#if defined(MS_WINDOWS)
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
 #  define TERMSIZE_USE_CONIO
 #elif defined(HAVE_SYS_IOCTL_H)
 #  include <sys/ioctl.h>
@@ -310,8 +323,9 @@ corresponding Unix manual entries for more information on calls.");
 #  define HAVE_SYSTEM     1
 #  include <process.h>
 #else
-#  ifdef _MSC_VER
+#  if defined(_MSC_VER) || defined(MS_WINCE)
      /* Microsoft compiler */
+#    ifndef MS_WINCE
 #    define HAVE_GETPPID    1
 #    define HAVE_GETLOGIN   1
 #    define HAVE_SPAWNV     1
@@ -321,6 +335,7 @@ corresponding Unix manual entries for more information on calls.");
 #    define HAVE_PIPE       1
 #    define HAVE_SYSTEM     1
 #    define HAVE_CWAIT      1
+#    endif /* MS_WINCE */
 #    define HAVE_FSYNC      1
 #    define fsync _commit
 #  else
@@ -497,8 +512,13 @@ extern char        *ctermid_r(char *);
 #endif
 
 #ifdef MS_WINDOWS
+#ifndef MS_WINCE
 #  define INITFUNC PyInit_nt
 #  define MODNAME "nt"
+#else
+#  define INITFUNC PyInit_ce
+#  define MODNAME "ce"
+#endif /* MS_WINCE */
 #else
 #  define INITFUNC PyInit_posix
 #  define MODNAME "posix"
@@ -1390,7 +1410,11 @@ dir_fd_unavailable(PyObject *o, void *p)
 static int
 fd_specified(const char *function_name, int fd)
 {
+#ifndef MS_WINCE
     if (fd == -1)
+#else
+    if (fd < 0)
+#endif
         return 0;
 
     argument_unavailable_error(function_name, "fd");
@@ -1583,7 +1607,7 @@ win32_get_reparse_tag(HANDLE reparse_point_handle, ULONG *reparse_tag)
 ** man environ(7).
 */
 #include <crt_externs.h>
-#elif !defined(_MSC_VER) && (!defined(__WATCOMC__) || defined(__QNX__) || defined(__VXWORKS__))
+#elif !defined(_MSC_VER) && !defined(MS_WINCE) && (!defined(__WATCOMC__) || defined(__QNX__) || defined(__VXWORKS__))
 extern char **environ;
 #endif /* !_MSC_VER */
 
@@ -1600,7 +1624,7 @@ convertenviron(void)
     d = PyDict_New();
     if (d == NULL)
         return NULL;
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     /* _wenviron must be initialized in this way if the program is started
        through main() instead of wmain(). */
     _wgetenv(L"");
@@ -1618,14 +1642,14 @@ convertenviron(void)
     for (; *e != NULL; e++) {
         PyObject *k;
         PyObject *v;
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS)
         const wchar_t *p = wcschr(*e, L'=');
 #else
         const char *p = strchr(*e, '=');
 #endif
         if (p == NULL)
             continue;
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS)
         k = PyUnicode_FromWideChar(*e, (Py_ssize_t)(p-*e));
 #else
         k = PyBytes_FromStringAndSize(*e, (int)(p-*e));
@@ -1634,7 +1658,7 @@ convertenviron(void)
             Py_DECREF(d);
             return NULL;
         }
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS)
         v = PyUnicode_FromWideChar(p+1, wcslen(p+1));
 #else
         v = PyBytes_FromStringAndSize(p+1, strlen(p+1));
@@ -1836,10 +1860,14 @@ find_data_to_file_info(WIN32_FIND_DATAW *pFileData,
     info->nFileSizeHigh    = pFileData->nFileSizeHigh;
     info->nFileSizeLow     = pFileData->nFileSizeLow;
 /*  info->nNumberOfLinks   = 1; */
+#ifndef MS_WINCE
     if (pFileData->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
         *reparse_tag = pFileData->dwReserved0;
     else
         *reparse_tag = 0;
+#else
+    *reparse_tag = 0;
+#endif
 }
 
 static BOOL
@@ -1902,7 +1930,11 @@ win32_xstat_impl(const wchar_t *path, struct _Py_stat_struct *result,
             if (!attributes_from_dir(path, &fileInfo, &tagInfo.ReparseTag)) {
                 /* Cannot read the parent directory. */
                 switch (GetLastError()) {
+#ifndef MS_WINCE
                 case ERROR_FILE_NOT_FOUND: /* File cannot be found */
+#else
+                case ERROR_NO_MORE_FILES: /* File cannot be found */
+#endif
                 case ERROR_PATH_NOT_FOUND: /* File parent directory cannot be found */
                 case ERROR_NOT_READY: /* Drive exists but unavailable */
                 case ERROR_BAD_NET_NAME: /* Remote drive unavailable */
@@ -3947,7 +3979,7 @@ os_link_impl(PyObject *module, path_t *src, path_t *dst, int src_dir_fd,
         return NULL;
     }
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     Py_BEGIN_ALLOW_THREADS
     result = CreateHardLinkW(dst->wide, src->wide, NULL);
     Py_END_ALLOW_THREADS
@@ -4048,7 +4080,11 @@ _listdir_windows_no_opendir(path_t *path, PyObject *list)
     Py_END_ALLOW_THREADS
     if (hFindFile == INVALID_HANDLE_VALUE) {
         int error = GetLastError();
+#ifndef MS_WINCE
         if (error == ERROR_FILE_NOT_FOUND)
+#else
+        if (error == ERROR_NO_MORE_FILES)
+#endif
             goto exit;
         Py_DECREF(list);
         list = path_error(path);
@@ -4121,7 +4157,11 @@ _posix_listdir(path_t *path, PyObject *list)
       if (HAVE_FDOPENDIR_RUNTIME) {
         /* closedir() closes the FD, so we duplicate it */
         fd = _Py_dup(path->fd);
+#ifndef MS_WINCE
         if (fd == -1)
+#else
+        if (fd < 0)
+#endif
             return NULL;
 
         return_str = 1;
@@ -4329,8 +4369,13 @@ os__getfinalpathname_impl(PyObject *module, path_t *path)
        target path name. */
     while (1) {
         Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
         result_length = GetFinalPathNameByHandleW(hFile, target_path,
                                                   buf_size, VOLUME_NAME_DOS);
+#else
+        result_length = GetFinalPathNameByHandleW(hFile, target_path,
+                                                  buf_size, VOLUME_NAME_NONE);
+#endif
         Py_END_ALLOW_THREADS
 
         if (!result_length) {
@@ -4674,7 +4719,12 @@ internal_rename(path_t *src, path_t *dst, int src_dir_fd, int dst_dir_fd, int is
 
 #ifdef MS_WINDOWS
     Py_BEGIN_ALLOW_THREADS
+#ifndef MS_WINCE
     result = MoveFileExW(src->wide, dst->wide, flags);
+#else
+    /* FIXME-WINCE: replasing is not considered well. */
+    result = MoveFile(src->wide, dst->wide);
+#endif
     Py_END_ALLOW_THREADS
 
     if (!result)
@@ -4925,8 +4975,12 @@ BOOL WINAPI Py_DeleteFileW(LPCWSTR lpFileName)
             if(find_data_handle != INVALID_HANDLE_VALUE) {
                 /* IO_REPARSE_TAG_SYMLINK if it is a symlink and
                    IO_REPARSE_TAG_MOUNT_POINT if it is a junction point. */
+#ifndef MS_WINCE
                 is_link = find_data.dwReserved0 == IO_REPARSE_TAG_SYMLINK ||
                           find_data.dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT;
+#else
+		is_link = 0;
+#endif
                 FindClose(find_data_handle);
             }
         }
@@ -9244,7 +9298,6 @@ os_closerange_impl(PyObject *module, int fd_low, int fd_high)
     Py_RETURN_NONE;
 }
 
-
 /*[clinic input]
 os.dup -> int
 
@@ -9361,7 +9414,6 @@ os_dup2_impl(PyObject *module, int fd, int fd2, int inheritable)
 
     return res;
 }
-
 
 #ifdef HAVE_LOCKF
 /*[clinic input]
@@ -10739,7 +10791,7 @@ os_ftruncate_impl(PyObject *module, int fd, Py_off_t length)
     do {
         Py_BEGIN_ALLOW_THREADS
         _Py_BEGIN_SUPPRESS_IPH
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
         result = _chsize_s(fd, length);
 #else
         result = ftruncate(fd, length);
@@ -10790,7 +10842,11 @@ os_truncate_impl(PyObject *module, path_t *path, Py_off_t length)
     if (fd < 0)
         result = -1;
     else {
+#ifndef MS_WINCE
         result = _chsize_s(fd, length);
+#else
+        result = _chsize(fd, length);
+#endif
         close(fd);
         if (result < 0)
             errno = result;
@@ -10936,6 +10992,7 @@ win32_putenv(PyObject *name, PyObject *value)
     if (env == NULL) {
         return NULL;
     }
+#ifndef MS_WINCE
     if (size > _MAX_ENV) {
         PyErr_Format(PyExc_ValueError,
                      "the environment variable is longer than %u characters",
@@ -10957,6 +11014,7 @@ win32_putenv(PyObject *name, PyObject *value)
         posix_error();
         return NULL;
     }
+#endif /* !MS_WINCE */
 
     Py_RETURN_NONE;
 }
@@ -12507,6 +12565,13 @@ os_abort_impl(PyObject *module)
 static int has_ShellExecute = -1;
 static HINSTANCE (CALLBACK *Py_ShellExecuteW)(HWND, LPCWSTR, LPCWSTR, LPCWSTR,
                                               LPCWSTR, INT);
+
+#ifdef MS_WINCE
+#include <wincrypt.h>
+#undef GetProcAddress
+#define GetProcAddress GetProcAddressA
+#endif
+
 static int
 check_ShellExecute()
 {
@@ -14525,8 +14590,10 @@ error:
  * on win32
  */
 
+#ifndef MS_WINCE
 typedef DLL_DIRECTORY_COOKIE (WINAPI *PAddDllDirectory)(PCWSTR newDirectory);
 typedef BOOL (WINAPI *PRemoveDllDirectory)(DLL_DIRECTORY_COOKIE cookie);
+#endif
 
 /*[clinic input]
 os._add_dll_directory
@@ -14547,6 +14614,7 @@ static PyObject *
 os__add_dll_directory_impl(PyObject *module, path_t *path)
 /*[clinic end generated code: output=80b025daebb5d683 input=1de3e6c13a5808c8]*/
 {
+#ifndef MS_WINCE
     HMODULE hKernel32;
     PAddDllDirectory AddDllDirectory;
     DLL_DIRECTORY_COOKIE cookie = 0;
@@ -14574,6 +14642,9 @@ os__add_dll_directory_impl(PyObject *module, path_t *path)
     }
 
     return PyCapsule_New(cookie, "DLL directory cookie", NULL);
+#else
+    return NULL;
+#endif
 }
 
 /*[clinic input]
@@ -14592,6 +14663,7 @@ static PyObject *
 os__remove_dll_directory_impl(PyObject *module, PyObject *cookie)
 /*[clinic end generated code: output=594350433ae535bc input=c1d16a7e7d9dc5dc]*/
 {
+#ifndef MS_WINCE
     HMODULE hKernel32;
     PRemoveDllDirectory RemoveDllDirectory;
     DLL_DIRECTORY_COOKIE cookieValue;
@@ -14626,12 +14698,16 @@ os__remove_dll_directory_impl(PyObject *module, PyObject *cookie)
     if (PyCapsule_SetName(cookie, NULL)) {
         return NULL;
     }
+#else
+    PyErr_SetString(PyExc_TypeError,
+	"This feature is not supported on Windows CE.");
+    return NULL;
+#endif
 
     Py_RETURN_NONE;
 }
 
 #endif
-
 
 /* Only check if WIFEXITED is available: expect that it comes
    with WEXITSTATUS, WIFSIGNALED, etc.
@@ -15449,7 +15525,7 @@ all_ins(PyObject *m)
     if (PyModule_AddIntConstant(m, "_COPYFILE_DATA", COPYFILE_DATA)) return -1;
 #endif
 
-#ifdef MS_WINDOWS
+#if defined(MS_WINDOWS) && !defined(MS_WINCE)
     if (PyModule_AddIntConstant(m, "_LOAD_LIBRARY_SEARCH_DEFAULT_DIRS", LOAD_LIBRARY_SEARCH_DEFAULT_DIRS)) return -1;
     if (PyModule_AddIntConstant(m, "_LOAD_LIBRARY_SEARCH_APPLICATION_DIR", LOAD_LIBRARY_SEARCH_APPLICATION_DIR)) return -1;
     if (PyModule_AddIntConstant(m, "_LOAD_LIBRARY_SEARCH_SYSTEM32", LOAD_LIBRARY_SEARCH_SYSTEM32)) return -1;

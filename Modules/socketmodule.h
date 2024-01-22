@@ -18,7 +18,7 @@
 /*
  * If Windows has bluetooth support, include bluetooth constants.
  */
-#ifdef AF_BTH
+#if defined(AF_BTH) && !defined(MS_WINCE)
 # include <ws2bth.h>
 # include <pshpack1.h>
 
@@ -75,6 +75,9 @@ struct SOCKADDR_BTH_REDEF {
 #  define HAVE_GETADDRINFO
 #  define HAVE_GETNAMEINFO
 #  define ENABLE_IPV6
+# elif defined(MS_WINCE)
+#  include <winsock2.h>
+#  define HAVE_SOCKADDR_STORAGE
 # else
 typedef int socklen_t;
 # endif /* IPPROTO_IPV6 */
@@ -249,7 +252,7 @@ typedef union sock_addr {
     struct sockaddr_rc bt_rc;
     struct sockaddr_sco bt_sco;
     struct sockaddr_hci bt_hci;
-#elif defined(MS_WINDOWS)
+#elif defined(MS_WINDOWS) && !defined(MS_WINCE)
     struct SOCKADDR_BTH_REDEF bt_rc;
 #endif
 #ifdef HAVE_NETPACKET_PACKET_H

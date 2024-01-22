@@ -244,6 +244,10 @@ shutdown(how) -- shut down traffic in one or both directions\n\
 #define PySocket_BUILDING_SOCKET
 #include "socketmodule.h"
 
+#ifdef MS_WINCE
+#undef finally /* this macro from the system headers conflicts with the code below */
+#endif
+
 /* Addressing includes */
 
 #ifndef MS_WINDOWS
@@ -298,8 +302,12 @@ shutdown(how) -- shut down traffic in one or both directions\n\
 #define IPPROTO_SCTP IPPROTO_SCTP  // WinSock2 only
 #endif /* MS_WINDOWS */
 
+#ifndef MS_WINCE
 /* Provides the IsWindows7SP1OrGreater() function */
 #include <versionhelpers.h>
+#else
+#define IsWindow7SP1OrGreater() (FALSE)
+#endif
 // For if_nametoindex() and if_indextoname()
 #include <iphlpapi.h>
 

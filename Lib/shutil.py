@@ -32,12 +32,17 @@ try:
 except ImportError:
     _LZMA_SUPPORTED = False
 
-_WINDOWS = os.name == 'nt'
+_WINDOWS = os.name in ('nt', 'ce')
 posix = nt = None
 if os.name == 'posix':
     import posix
-elif _WINDOWS:
+elif os.name == 'nt':
     import nt
+elif os.name == 'ce':
+    try:
+        import ce as nt
+    except:
+        import posix as nt # for building
 
 COPY_BUFSIZE = 1024 * 1024 if _WINDOWS else 64 * 1024
 _USE_CP_SENDFILE = hasattr(os, "sendfile") and sys.platform.startswith("linux")

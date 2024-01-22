@@ -16,7 +16,7 @@ import struct
 import secrets
 import types
 
-if os.name == "nt":
+if os.name in ("nt", "ce"):
     import _winapi
     _USE_POSIX = False
 else:
